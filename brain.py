@@ -14,7 +14,7 @@ style.use('ggplot')
 class Brain:
 
 	def __init__(self):
-		self.k = 15
+		self.k = 1
 		self.clf = KNeighborsClassifier(self.k)
 		self.X = np.array([])
 		self.y = np.array([])
