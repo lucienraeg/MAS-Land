@@ -28,6 +28,7 @@ classifiers = [
 X, y = make_classification(n_features=2, n_redundant=0, n_informative=2,
                            random_state=1, n_clusters_per_class=1)
 rng = np.random.RandomState(2)
+
 X += 2 * rng.uniform(size=X.shape)
 linearly_separable = (X, y)
 
@@ -47,8 +48,7 @@ for ds_cnt, ds in enumerate(datasets):
 
     x_min, x_max = X[:, 0].min() - .5, X[:, 0].max() + .5
     y_min, y_max = X[:, 1].min() - .5, X[:, 1].max() + .5
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                         np.arange(y_min, y_max, h))
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
 
     # just plot the dataset first
     cm = plt.cm.RdBu
