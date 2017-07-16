@@ -14,14 +14,14 @@ style.use('ggplot')
 class Brain:
 
 	def __init__(self):
-		self.k = 20
+		self.k = 15
 		self.clf = KNeighborsClassifier(self.k)
 		self.X = np.array([])
 		self.y = np.array([])
 
 		print("Brain inititiated")
 
-	def addData(self, X_new, y_new):
+	def add_data(self, X_new, y_new):
 		# turn into list
 		self.X = self.X.tolist()
 		self.y = self.y.tolist()
@@ -64,7 +64,7 @@ class Brain:
 
 		# plot setup
 		plt.figure(figsize=(6,6))
-		cm_list = ["#FFAAAA", "#FFCCCC", "#CCFFCC", "#AAFFAA"]
+		cm_list = "#FFA0A0 #FFB8B8 #FFB0B0 #FFC8C8 #FFC0C0 #D0FFD0 #D8FFD8 #C0FFC0 #C8FFC8 #B0FFB0".split()
 		cm = ListedColormap(cm_list)
 		cm_bold = ListedColormap(["#FF0000", "#00FF00"])
 		ax = plt.subplot(1, 1, 1)
@@ -82,10 +82,11 @@ class Brain:
 		ax.set_ylim(yy.min(), yy.max())
 		ax.set_xticks(())
 		ax.set_yticks(())
-		ax.text(xx.max() - 0.1, yy.min() + 0.1, "k={}".format(self.k), size=24, horizontalalignment='right')
+		ax.text(xx.min() + 0.1, yy.min() + 0.1, "n_samples={}".format(len(self.y)), size=12, horizontalalignment='left')
+		ax.text(xx.max() - 0.1, yy.min() + 0.1, "k={}".format(self.k), size=12, horizontalalignment='right')
 
 		end_time = time.time() - start_time
-		print("Prepared visualization in {}s".format(round(end_time,5)))		
+		print("Prepared visualization in {}s".format(round(end_time,5)))
 
 		plt.savefig("media/brain-visualization-example-k={}.png".format(self.k), bbox_inches="tight")
 
@@ -96,7 +97,7 @@ class Brain:
 brain = Brain()
 
 X_new, y_new = make_moons(n_samples=100, noise=0.5, random_state=2)
-brain.addData(X_new, y_new)
+brain.add_data(X_new, y_new)
 
 brain.learn()
 brain.visualize()

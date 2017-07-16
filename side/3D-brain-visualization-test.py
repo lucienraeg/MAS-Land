@@ -3,19 +3,17 @@ import matplotlib.pyplot as plt
 import time
 from matplotlib import style
 from matplotlib.colors import ListedColormap
-from matplotlib import cm
+from mpl_toolkits.mplot3d import Axes3D
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.datasets import make_classification
 from sklearn.neighbors import KNeighborsClassifier
 
-style.use('ggplot')
-
 
 class Brain:
 
 	def __init__(self):
-		k = 20
+		k = 3
 		self.clf = KNeighborsClassifier(k)
 		self.X = np.array([])
 		self.y = np.array([])
@@ -29,7 +27,6 @@ class Brain:
 
 		# add new data
 		for X_entry in X_new:
-			print(X_entry)
 			self.X.append([X_entry[0], X_entry[1], X_entry[2]])
 
 		for y_entry in y_new:
@@ -67,28 +64,38 @@ class Brain:
 
 		# plot setup
 		plt.figure(figsize=(6,6))
-		cm = ListedColormap(["#FFAAAA", "#FFCCCC", "#CCFFCC", "#AAFFAA"])
+		cm = ListedColormap(["#FFA0A0", "#FFB8B8", "#FFB0B0", "#FFC8C8", "#FFC0C0", "#C0FFC0", "#C8FFC8", "#B0FFB0", "#B8FFB8", "#A0FFA0"])
 		cm_bold = ListedColormap(["#FF0000", "#00FF00"])
 		ax = plt.subplot(1, 1, 1, projection="3d")
 
+		print("Organized data and plot in {}s".format(round(time.time() - start_time,5)))
+
+		start_time = time.time()
+
 		# get predictions
-		self.V = self.clf.predict_proba(np.c_[xx.ravel(), yy.ravel()])[:, 1]
+		self.V = self.clf.predict_proba(np.c_[xx.ravel(), yy.ravel(), zz.ravel()])[:, 1]
 		self.V = self.V.reshape(xx.shape)
 
-		print(self.V)
+		print("Created predictions in {}s".format(round(time.time() - start_time,5)))
 
-		# plot Z as 3d contour
-		ax.plot_surface(self.V)
+		start_time = time.time()
+
+		# plot contours
+		V_X = (self.V[:, 0])
+		V_Y = (self.V[:, 1])
+		V_Z = (self.V[:, 2])
+
+		ax.contourf(V_X, V_Y, V_Z, zdir="z", cmap=cm) # DOESN'T WORK
 
 		# plot X as scatter
-		ax.scatter(self.X[:, 0], self.X[:, 1], c=self.y, cmap=cm_bold, marker="x")
-		ax.set_xlim(xx.min(), xx.max())
-		ax.set_ylim(yy.min(), yy.max())
-		ax.set_xticks(())
-		ax.set_yticks(())
+		ax.scatter(self.X[:, 0], self.X[:, 1], self.X[:, 2], c=self.y, cmap=cm_bold, marker="x")
 
-		end_time = time.time() - start_time
-		print("Prepared visualization in {}s".format(round(end_time,5)))
+		# set labels
+		ax.set_xlabel("X")
+		ax.set_ylabel("Y")
+		ax.set_zlabel("Z")
+
+		print("Prepared Visualization in {}s".format(round(time.time() - start_time,5)))
 
 		# show graph
 		plt.show()
@@ -96,7 +103,7 @@ class Brain:
 
 brain = Brain()
 
-X_new, y_new = make_classification(n_features=3, n_redundant=0, n_informative=3, random_state=1, n_clusters_per_class=1)
+X_new, y_new = make_classification(n_features=3, n_redundant=0, n_informative=3, random_state=1, n_clusters_per_class=1, n_samples=20)
 brain.addData(X_new, y_new)
 
 brain.learn()
