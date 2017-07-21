@@ -56,12 +56,28 @@ class Window:
 		self.draw_grid(self.grid_size)
 
 		for agent in self.agents:
-			self.draw_agent(agent[4], agent[5], agent[2], agent[3], agent[0])
-			agent[4], agent[5] = agent[8].move(agent[4], agent[5])
+			eye = agent[6]
+			brain = agent[7]
+			muscle = agent[8]
+
+			# percieve area
+			potential_cells = eye.look(agent[4], agent[5])
+
+			# calculate best cell to move to
+			move_cell = random.choice(potential_cells)
+
+			# move to that cell
+			agent[4], agent[5] = muscle.move(move_cell[0], move_cell[1])
 
 			# clamp pos
 			agent[4] = max(0, min(agent[4], (self.display_width//self.grid_size)-1))
 			agent[5] = max(0, min(agent[5], (self.display_width//self.grid_size)-1))
+
+			# process event
+
+
+			# draw agent
+			self.draw_agent(agent[4], agent[5], agent[2], agent[3], agent[0])
 
 		pygame.display.update()
 		self.clock.tick(2)
@@ -104,8 +120,8 @@ class Window:
 		shape = random.choice([0, 1, 2]) # square, circle, triangle
 		start_x = random.randint(0, (self.display_width//self.grid_size)-1)
 		start_y = random.randint(0, (self.display_height//self.grid_size)-1)
-		eye = "BLAH" # agent.Eye()
-		brain = "BLAH BLAH" # agent.Brain()
+		eye = agent.Eye()
+		brain = agent.Brain()
 		muscle = agent.Muscle()
 
 		self.agents.append([number, name, color, shape, start_x, start_y, eye, brain, muscle])

@@ -11,6 +11,20 @@ from sklearn.neighbors import KNeighborsClassifier
 
 style.use('ggplot')
 
+class Eye:
+
+	def __init__(self):
+		print("Eye: Inititiated")
+
+	def look(self, x, y):
+		potential_cells = []
+
+		for cell in [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)]:
+			potential_cells.append((x+cell[0], y+cell[1]))
+
+		# move_pos = random.choice(potential_cells)
+
+		return potential_cells
 
 class Brain:
 
@@ -50,6 +64,9 @@ class Brain:
 		self.clf.fit(self.X, self.y)
 
 		print("Brain: Fitted {} samples [{}s]".format(len(self.y),round(time.time() - start_time,5)))
+
+	def predict(self, X):
+		return(self.clf.predict(X))
 
 	def visualize(self, show_text=True, mesh_step_size=0.1):
 		# step size in the mesh
@@ -101,19 +118,11 @@ class Brain:
 class Muscle:
 
 	def __init__(self):
-		self.cells_to_check = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)]
-		
 		print("Muscle: Inititiated")
 
+
 	def move(self, x, y):
-		potential_cells = []
-
-		for cell in self.cells_to_check:
-			potential_cells.append((x+cell[0], y+cell[1]))
-
-		move_pos = random.choice(potential_cells)
-
-		return move_pos[0], move_pos[1]
+		return x, y
 
 
 if __name__ == "__main__":
