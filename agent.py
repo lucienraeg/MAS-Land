@@ -36,6 +36,18 @@ class Brain:
 
 		print("Brain: Inititiated")
 
+	def process_experience(self, color, shape, sentiment):
+		self.X = self.X.tolist()
+		self.y = self.y.tolist()
+
+		self.X.append([color, shape])
+		self.y.append(sentiment)
+
+		self.X = np.array(self.X)
+		self.y = np.array(self.y)
+
+		print("Brain: Experience processed sentiment={}".format(color, shape, sentiment))
+
 	def add_data(self, X_new, y_new):
 		# turn into list
 		self.X = self.X.tolist()
@@ -54,9 +66,8 @@ class Brain:
 
 		print("Brain: Added {} entries of data".format(len(y_new)))
 
-	def check(self):
-		print("X: shape={}".format(np.shape(self.X)))
-		print("y: shape={}".format(np.shape(self.y)))
+	def total_experiences(self):
+		return len(self.y)
 
 	def learn(self):
 		start_time = time.time()
@@ -68,7 +79,7 @@ class Brain:
 	def predict(self, X):
 		return(self.clf.predict(X))
 
-	def visualize(self, show_text=True, mesh_step_size=0.1):
+	def visualize(self, title, show_text=True, mesh_step_size=0.1):
 		# step size in the mesh
 
 		start_time = time.time()
@@ -79,9 +90,10 @@ class Brain:
 
 		# plot setup
 		plt.figure(figsize=(6,6))
-		cm_list = "#FFA0A0 #FFB8B8 #FFB0B0 #FFC8C8 #FFC0C0 #D0FFD0 #D8FFD8 #C0FFC0 #C8FFC8 #B0FFB0".split()
+		cm_list = "#FFA0A0 #FFB8B8 #FFB0B0 #FFC8C8 #FFC0C0 #FFD0D0 #FFFFFF #E0FFE0 #D0FFD0 #D8FFD8 #C0FFC0 #C8FFC8 #B0FFB0".split()
 		cm = ListedColormap(cm_list)
-		cm_bold = ListedColormap(["#FF0000", "#00FF00"])
+		# cm_bold = ListedColormap(["#FF0000", "#00FF00"])
+		cm_bold = ListedColormap(["#000000"])
 		ax = plt.subplot(1, 1, 1)
 
 		print("Brain: Set up figure [{}s]".format(round(time.time() - start_time,5)))
@@ -98,11 +110,16 @@ class Brain:
 		ax.contourf(xx, yy, self.Z, cmap=cm, alpha=1)
 
 		# plot X as scatter
-		ax.scatter(self.X[:, 0], self.X[:, 1], c=self.y, cmap=cm_bold, marker="x")
+		ax.scatter(self.X[:, 0], self.X[:, 1], c=self.y, cmap=cm_bold, marker="x", alpha=0.1)
 		ax.set_xlim(xx.min(), xx.max())
 		ax.set_ylim(yy.min(), yy.max())
 		ax.set_xticks(())
 		ax.set_yticks(())
+		ax.set_xlabel("Color")
+		ax.set_ylabel("Shape")
+
+
+		ax.set_title(title)
 
 		if show_text:
 			ax.text(xx.min() + 0.1, yy.min() + 0.1, "n_samples={}".format(len(self.y)), size=12, horizontalalignment='left')
@@ -132,4 +149,4 @@ if __name__ == "__main__":
 	brain.add_data(X_new, y_new)
 
 	brain.learn()
-	brain.visualize()
+	brain.visualize("Toy Set")

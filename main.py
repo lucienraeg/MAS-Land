@@ -10,7 +10,7 @@ with open("agent-names.csv", "rt") as f:
 	for row in reader:
 		names.append(row[0])
 
-seed = 12341236
+seed = 224225
 running = True
 
 random.seed(seed)
@@ -45,7 +45,7 @@ class Window:
 		self.shapes = {0: "square", 1: "circle", 2: "triangle"}
 
 		# init agents
-		starting_agents = 4
+		starting_agents = 64
 		self.agents = []
 		for i in range(starting_agents):
 			self.create_agent(i)
@@ -61,18 +61,37 @@ class Window:
 
 		for agent in self.agents:
 
-			# process any experience had
-			agent_contacts = []
-			for a in enumerate(agent_pos_list):
-				# check for contact with another agent
-				if a[1] == (agent[4], agent[5])  and a[0] != agent[0]:
-					print("[AGENT#{}] Contact! pos=({},{})".format(agent[0], a[1][0], a[1][1]))
-					
-
 			eye = agent[6]
 			brain = agent[7]
 			muscle = agent[8]
 
+			# process any experience had
+			agent_contacts = []
+			for a in enumerate(agent_pos_list):
+				# check for contact with another agent
+				if a[1] == (agent[4], agent[5]) and a[0] != agent[0]:
+					other_agent = a[0]
+
+					print("[AGENT#{}] Contact w/ #{}! pos=({},{})".format(agent[0], other_agent, a[1][0], a[1][1]))
+
+					other_color = self.agents[other_agent][2]
+					other_shape = self.agents[other_agent][3]
+
+					if other_color == 0:
+						other_sentiment = -1
+					elif other_color == 2:
+						other_sentiment = 1
+					else:
+						other_sentiment = 0
+
+					brain.process_experience(other_color, other_shape, other_sentiment)
+
+					if brain.total_experiences() > 3:
+						brain.learn()
+
+						if agent[0] == 41:
+							brain.visualize("AGENT#{}: {}".format(agent[0], agent[1]))
+					
 			# percieve area
 			potential_cells = eye.look(agent[4], agent[5])
 
@@ -84,7 +103,7 @@ class Window:
 
 			# clamp pos
 			agent[4] = max(1, min(agent[4], (self.display_width//self.grid_size)-2))
-			agent[5] = max(1, min(agent[5], (self.display_width//self.grid_size)-2))
+			agent[5] = max(1, min(agent[5], (self.display_height//self.grid_size)-2))
 
 			# draw agent
 			self.draw_agent(agent[4], agent[5], agent[2], agent[3], agent[0])
@@ -136,7 +155,7 @@ class Window:
 
 		self.agents.append([number, name, color, shape, start_x, start_y, eye, brain, muscle])
 
-		print("Agent Created: number={}, name={}, color={}, shape={}({}), pos=({}, {})".format(number, name, color, shape, self.shapes[shape], start_x, start_y))
+		print("[AGENT#{}] Created! number={}, name={}, color={}, shape={}({}), pos=({}, {})".format(number, number, name, color, shape, self.shapes[shape], start_x, start_y))
 
 
 Window = Window()
