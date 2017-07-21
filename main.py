@@ -55,7 +55,20 @@ class Window:
 
 		self.draw_grid(self.grid_size)
 
+		agent_pos_list = []
 		for agent in self.agents:
+			agent_pos_list.append((agent[4], agent[5]))
+
+		for agent in self.agents:
+
+			# process any experience had
+			agent_contacts = []
+			for a in enumerate(agent_pos_list):
+				# check for contact with another agent
+				if a[1] == (agent[4], agent[5])  and a[0] != agent[0]:
+					print("[AGENT#{}] Contact! pos=({},{})".format(agent[0], a[1][0], a[1][1]))
+					
+
 			eye = agent[6]
 			brain = agent[7]
 			muscle = agent[8]
@@ -70,11 +83,8 @@ class Window:
 			agent[4], agent[5] = muscle.move(move_cell[0], move_cell[1])
 
 			# clamp pos
-			agent[4] = max(0, min(agent[4], (self.display_width//self.grid_size)-1))
-			agent[5] = max(0, min(agent[5], (self.display_width//self.grid_size)-1))
-
-			# process event
-
+			agent[4] = max(1, min(agent[4], (self.display_width//self.grid_size)-2))
+			agent[5] = max(1, min(agent[5], (self.display_width//self.grid_size)-2))
 
 			# draw agent
 			self.draw_agent(agent[4], agent[5], agent[2], agent[3], agent[0])
