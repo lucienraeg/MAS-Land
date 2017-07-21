@@ -1,8 +1,19 @@
 import pygame
 import random
+import csv
+import agent
 
-seed = 12345678
+names = []
+
+with open("agent-names.csv", "rt") as f:
+	reader = csv.reader(f)
+	for row in reader:
+		names.append(row[0])
+
+seed = 12341236
 running = True
+
+random.seed(seed)
 
 class Window:
 
@@ -26,16 +37,34 @@ class Window:
 		self.GREEN = (0, 255, 0)
 		self.BLUE = (0, 0, 255)
 
+		# init font
+		self.FNT_SMALL = pygame.font.SysFont("arial", 11)
+
+		# init dicts
+		self.colors = {0: self.RED, 1: self.GREEN, 2: self.BLUE}
+		self.shapes = {0: "square", 1: "circle", 2: "triangle"}
+
+		# init agents
+		starting_agents = 4
+		self.agents = []
+		for i in range(starting_agents):
+			self.create_agent(i)
+
 	def main(self):
 		self.display.fill(self.WHITE)
 
 		self.draw_grid(self.grid_size)
-		self.draw_agent(2, 3, self.RED, "square")
-		self.draw_agent(4, 2, self.GREEN, "circle")
-		self.draw_agent(4, 5, self.BLUE, "triangle")
+
+		for agent in self.agents:
+			self.draw_agent(agent[4], agent[5], agent[2], agent[3], agent[0])
+			agent[4], agent[5] = agent[8].move(agent[4], agent[5])
+
+			# clamp pos
+			agent[4] = max(0, min(agent[4], (self.display_width//self.grid_size)-1))
+			agent[5] = max(0, min(agent[5], (self.display_width//self.grid_size)-1))
 
 		pygame.display.update()
-		self.clock.tick(15)
+		self.clock.tick(2)
 
 		pygame.display.set_caption("Seed: {}, FPS: {}".format(seed, round(self.clock.get_fps(),2)))
 
@@ -46,23 +75,42 @@ class Window:
 		for row in range((self.display_height//grid_size)+1):
 			pygame.draw.line(self.display, self.GRAY, (0, row*grid_size), (self.display_width, row*grid_size))
 
-	def draw_agent(self, row, col, color, shape):
-		x = row*self.grid_size+(self.grid_size//2)
-		y = col*self.grid_size+(self.grid_size//2)
+	def draw_agent(self, x, y, color, shape, number):
+		x = x*self.grid_size+(self.grid_size//2)
+		y = y*self.grid_size+(self.grid_size//2)
 
-		if shape == "square":
-			pygame.draw.rect(self.display, color, (x-10, y-10, 20, 20))
+		if self.shapes[shape] == "square":
+			pygame.draw.rect(self.display, self.colors[color], (x-10, y-10, 20, 20))
 			pygame.draw.rect(self.display, self.BLACK, (x-11, y-11, 22, 22), 3)
-		elif shape == "circle":
-			pygame.draw.circle(self.display, color, (x, y), 12)
+		elif self.shapes[shape] == "circle":
+			pygame.draw.circle(self.display, self.colors[color], (x, y), 12)
 			pygame.draw.circle(self.display, self.BLACK, (x, y), 13, 3)
-		elif shape == "triangle":
-			pygame.draw.polygon(self.display, color, ((x, y-10), (x-10, y+10), (x+10, y+10)))
-			pygame.draw.polygon(self.display, self.BLACK, ((x, y-11), (x-11, y+11), (x+11, y+11)), 3)
+		elif self.shapes[shape] == "triangle":
+			pygame.draw.polygon(self.display, self.colors[color], ((x, y-10), (x-10, y+10), (x+10, y+10)))
+			pygame.draw.polygon(self.display, self.BLACK, ((x, y-12), (x-12, y+12), (x+12, y+12)), 3)
+
+		num = self.FNT_SMALL.render("#{}".format(number), True, self.BLACK)
+		num_rect = num.get_rect(center=(x,y-20))
+		self.display.blit(num, num_rect)
+
+		name = self.FNT_SMALL.render("{}".format(self.agents[number][1]), True, self.BLACK)
+		name_rect = name.get_rect(center=(x,y+22))
+		self.display.blit(name, name_rect)
 
 
+	def create_agent(self, number):
+		name = names[number]
+		color = random.choice([0, 1, 2]) # red, green, blue
+		shape = random.choice([0, 1, 2]) # square, circle, triangle
+		start_x = random.randint(0, (self.display_width//self.grid_size)-1)
+		start_y = random.randint(0, (self.display_height//self.grid_size)-1)
+		eye = "BLAH" # agent.Eye()
+		brain = "BLAH BLAH" # agent.Brain()
+		muscle = agent.Muscle()
 
+		self.agents.append([number, name, color, shape, start_x, start_y, eye, brain, muscle])
 
+		print("Agent Created: number={}, name={}, color={}, shape={}({}), pos=({}, {})".format(number, name, color, shape, self.shapes[shape], start_x, start_y))
 
 
 Window = Window()
