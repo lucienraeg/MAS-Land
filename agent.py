@@ -36,7 +36,7 @@ class Brain:
 
 		print("Brain: Inititiated")
 
-	def process_experience(self, X_1, X_2, sentiment):
+	def process_experience(self, X_1, X_2, sentiment, details=False):
 		self.X = self.X.tolist()
 		self.y = self.y.tolist()
 
@@ -46,9 +46,10 @@ class Brain:
 		self.X = np.array(self.X)
 		self.y = np.array(self.y)
 
-		print("Brain: Experience processed! sentiment={}".format(sentiment))
+		if details:
+			print("Brain: Experience processed! sentiment={}".format(sentiment))
 
-	def add_data(self, X_new, y_new):
+	def add_data(self, X_new, y_new, details=False):
 		# turn into list
 		self.X = self.X.tolist()
 		self.y = self.y.tolist()
@@ -64,22 +65,24 @@ class Brain:
 		self.X = np.array(self.X)
 		self.y = np.array(self.y)
 
-		print("Brain: Added {} entries of data".format(len(y_new)))
+		if details:
+			print("Brain: Added {} entries of data".format(len(y_new)))
 
 	def total_experiences(self):
 		return len(self.y)
 
-	def learn(self):
+	def learn(self, details=False):
 		start_time = time.time()
 
 		self.clf.fit(self.X, self.y)
 
-		print("Brain: Fitted {} samples [{}s]".format(len(self.y),round(time.time() - start_time,5)))
+		if details:
+			print("Brain: Fitted {} samples [{}s]".format(len(self.y),round(time.time() - start_time,5)))
 
 	def predict(self, X):
 		return(self.clf.predict(X))
 
-	def visualize(self, title="", show_text=True, mesh_step_size=0.1):
+	def visualize(self, title="", show_text=True, mesh_step_size=1):
 		# step size in the mesh
 
 		start_time = time.time()

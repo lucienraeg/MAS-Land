@@ -28,9 +28,10 @@ class World:
 
 		# init misc
 		self.clock = pygame.time.Clock()
-		self.clock_speed = 300
+		self.clock_speed = 0.5
 		self.grid_size = 32
-		self.focus = 55
+		self.focus = None
+		self.focus_visualize_frequency = 1 # how many steps between
 
 		# init colors
 		self.WHITE = (255, 255, 255)
@@ -39,6 +40,7 @@ class World:
 		self.RED = (255, 0, 0)
 		self.GREEN = (0, 255, 0)
 		self.BLUE = (0, 0, 255)
+		self.YELLOW = (255, 255, 0)
 
 		# init font
 		self.FNT_SMALL = pygame.font.SysFont("arial", 11)
@@ -75,7 +77,8 @@ class World:
 				if a[1] == (agent[4], agent[5]) and a[0] != agent[0]:
 					other_agent = a[0]
 
-					print("[AGENT#{}] Contact w/ #{}! pos=({},{})".format(agent[0], other_agent, a[1][0], a[1][1]))
+					if agent[0] == self.focus:
+						print("[AGENT#{}] Contact w/ #{}! pos=({},{})".format(agent[0], other_agent, a[1][0], a[1][1]))
 
 					X_1 = self.agents[other_agent][2] # color
 					X_2 = self.agents[other_agent][3] # shape
@@ -88,11 +91,12 @@ class World:
 					else:
 						self.experience(agent, X_1, X_2, 1)
 
+					# learn from experiences
 					if brain.total_experiences() > 3:
 						try:
 							brain.learn()
 
-							if agent[0] == self.focus and brain.total_experiences() % 50 == 0:
+							if agent[0] == self.focus and brain.total_experiences() % self.focus_visualize_frequency == 0:
 								self.check_agent(agent[0])
 								brain.visualize("AGENT#{}: {}".format(agent[0], agent[1]))
 						except:
@@ -151,6 +155,9 @@ class World:
 		name_rect = name.get_rect(center=(x,y+22))
 		self.display.blit(name, name_rect)
 
+		if number == self.focus:
+			pygame.draw.circle(self.display, self.YELLOW, (x, y), 6)
+
 	def create_agent(self, number):
 		name = names[number]
 		color = random.choice([0, 1, 2]) # red, green, blue
@@ -164,6 +171,21 @@ class World:
 		self.agents.append([number, name, color, shape, start_x, start_y, eye, brain, muscle])
 
 		print("[AGENT#{}] Created! number={}, name={}, color={}, shape={}({}), pos=({}, {})".format(number, number, name, color, shape, self.shapes[shape], start_x, start_y))
+
+	def click_world(self, mouse_x, mouse_y):
+		x = mouse_x//self.grid_size
+		y = mouse_y//self.grid_size
+
+		agent_pos_list = []
+		for agent in self.agents:
+			agent_pos_list.append((agent[4], agent[5]))
+
+		for agent, agent_pos in enumerate(agent_pos_list):
+			
+			if (x, y) == agent_pos and agent != self.focus:
+				print("NOW FOLLOWING: #{}, {}".format(agent, self.agents[agent][1]))
+				self.focus = agent
+				break
 
 	def check_agent(self, number):
 		agent = self.agents[number]
@@ -181,9 +203,13 @@ World = World()
 while running:
 	World.main()
 
-	# allow quitting
+	# events
 	for event in pygame.event.get():
-		if event.type == pygame.QUIT:
+		if event.type == pygame.MOUSEBUTTONDOWN:
+			mouse_pos = pygame.mouse.get_pos()
+			World.click_world(mouse_pos[0], mouse_pos[1])
+
+		if event.type == pygame.QUIT: # quitting
 			running = False
 
 pygame.quit()
