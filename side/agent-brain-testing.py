@@ -6,7 +6,7 @@ from matplotlib import style
 from matplotlib.colors import ListedColormap
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.datasets import make_moons
+from sklearn.datasets import make_moons, load_iris
 from sklearn.neighbors import KNeighborsClassifier
 
 style.use('ggplot')
@@ -90,8 +90,7 @@ class Brain:
 
 		# plot setup
 		plt.figure(figsize=(6,6))
-		# cm = ListedColormap("#FFA0A0 #FFB8B8 #FFB0B0 #FFC8C8 #FFC0C0 #FFD0D0 #FFFFFF #E0FFE0 #D0FFD0 #D8FFD8 #C0FFC0 #C8FFC8 #B0FFB0".split())
-		cm = ListedColormap("#FFA0A0 #FFB0B0 #FFD0D0 #FFFFFF #C0FFC0 #B0FFB0 #A0FFA0".split())
+		cm_light = ListedColormap(["#FF0000", "#00FF00", "#0000FF"])
 		cm_bold = ListedColormap(["#000000"])
 		ax = plt.subplot(1, 1, 1)
 
@@ -107,7 +106,7 @@ class Brain:
 
 		# plot Z as contour
 		# ax.pcolormesh(xx, yy, self.Z, cmap=cm, alpha=1)
-		ax.contourf(xx, yy, self.Z, c=self.Z, cmap=cm, alpha=1)
+		ax.contourf(xx, yy, self.Z, c=self.Z, cmap=cm_light, alpha=1)
 
 		# plot X as scatter
 		ax.scatter(self.X[:, 0], self.X[:, 1], c=self.y, cmap=cm_bold, marker="o", alpha=0.05)
@@ -127,7 +126,7 @@ class Brain:
 
 		print("Brain: Prepared visualization [{}s]".format(round(time.time() - start_time,5)))
 
-		# print(self.y)
+		print(self.y)
 
 		# show graph
 		plt.show()
@@ -147,7 +146,9 @@ class Muscle:
 if __name__ == "__main__":
 	brain = Brain()
 
-	X_new, y_new = make_moons(n_samples=100, noise=0.5, random_state=2)
+	iris = load_iris()
+
+	X_new, y_new = iris.data[:, :2], iris.target
 	brain.add_data(X_new, y_new)
 
 	brain.learn()

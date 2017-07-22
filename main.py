@@ -2,6 +2,7 @@ import pygame
 import random
 import csv
 import agent
+import tkinter as tk
 
 names = []
 
@@ -15,7 +16,7 @@ running = True
 
 random.seed(seed)
 
-class WorldWindow:
+class World:
 
 	def __init__(self):
 		pygame.init()
@@ -29,6 +30,7 @@ class WorldWindow:
 		self.clock = pygame.time.Clock()
 		self.clock_speed = 300
 		self.grid_size = 32
+		self.focus = 55
 
 		# init colors
 		self.WHITE = (255, 255, 255)
@@ -82,7 +84,7 @@ class WorldWindow:
 					if X_1 == 0 and X_2 == 0:
 						self.experience(agent, X_1, X_2, 0)
 					elif X_1 == 2:
-						self.experience(agent, X_1, X_2, 0)
+						self.experience(agent, X_1, X_2, 2)
 					else:
 						self.experience(agent, X_1, X_2, 1)
 
@@ -90,7 +92,7 @@ class WorldWindow:
 						try:
 							brain.learn()
 
-							if agent[0] == 55 and brain.total_experiences() % 50 == 0:
+							if agent[0] == self.focus and brain.total_experiences() % 50 == 0:
 								self.check_agent(agent[0])
 								brain.visualize("AGENT#{}: {}".format(agent[0], agent[1]))
 						except:
@@ -149,7 +151,6 @@ class WorldWindow:
 		name_rect = name.get_rect(center=(x,y+22))
 		self.display.blit(name, name_rect)
 
-
 	def create_agent(self, number):
 		name = names[number]
 		color = random.choice([0, 1, 2]) # red, green, blue
@@ -175,11 +176,10 @@ class WorldWindow:
 		print("Experiences: {}".format(agent[7].total_experiences()))
 
 
-
-WorldWindow = WorldWindow()
+World = World()
 
 while running:
-	WorldWindow.main()
+	World.main()
 
 	# allow quitting
 	for event in pygame.event.get():
