@@ -2,7 +2,6 @@ import pygame
 import random
 import csv
 import agent
-import tkinter as tk
 
 names = []
 
@@ -16,7 +15,7 @@ running = True
 
 random.seed(seed)
 
-class World:
+class Window:
 
 	def __init__(self):
 		pygame.init()
@@ -28,10 +27,13 @@ class World:
 
 		# init misc
 		self.clock = pygame.time.Clock()
-		self.clock_speed = 0.5
+		self.world_speed = 300
 		self.grid_size = 32
-		self.focus = None
-		self.focus_visualize_frequency = 1 # how many steps between
+
+		# init focus
+		self.focus = 55 # default = None
+		self.focus_visualize_frequency = 3 # how many steps between
+		self.focus_visualize_time = 1 # in seconds
 
 		# init colors
 		self.WHITE = (255, 255, 255)
@@ -48,6 +50,7 @@ class World:
 		# init dicts
 		self.colors = {0: self.RED, 1: self.GREEN, 2: self.BLUE}
 		self.shapes = {0: "square", 1: "circle", 2: "triangle"}
+		self.sentiments = {-1: "negative", 0: "neutral", 1: "positive"}
 
 		# init agents
 		starting_agents = 64
@@ -65,7 +68,6 @@ class World:
 			agent_pos_list.append((agent[4], agent[5]))
 
 		for agent in self.agents:
-
 			eye = agent[6]
 			brain = agent[7]
 			muscle = agent[8]
@@ -77,19 +79,29 @@ class World:
 				if a[1] == (agent[4], agent[5]) and a[0] != agent[0]:
 					other_agent = a[0]
 
-					if agent[0] == self.focus:
-						print("[AGENT#{}] Contact w/ #{}! pos=({},{})".format(agent[0], other_agent, a[1][0], a[1][1]))
+					other_color = self.agents[other_agent][2]
+					other_shape = self.agents[other_agent][3]
+					other_x = self.agents[other_agent][4]
+					other_y = self.agents[other_agent][5]
 
-					X_1 = self.agents[other_agent][2] # color
-					X_2 = self.agents[other_agent][3] # shape
+					# get features
+					X_1 = other_color
+					X_2 = other_shape
 
-					# decide sentiment
-					if X_1 == 0 and X_2 == 0:
-						self.experience(agent, X_1, X_2, 0)
-					elif X_1 == 2:
-						self.experience(agent, X_1, X_2, 2)
+					# decide sentiment (label)
+					if other_color == 0 and other_shape == 0:
+						sent = -1
+					elif other_color == 2:
+						sent = 1
 					else:
-						self.experience(agent, X_1, X_2, 1)
+						sent = 0
+
+					# experience
+					self.experience(agent, [X_1, X_2], sent)
+
+					# print experience
+					if agent[0] == self.focus:
+						print("[AGENT#{}] Experience w/ #{}! sentiment={}".format(agent[0], other_agent, self.sentiments[sent]))
 
 					# learn from experiences
 					if brain.total_experiences() > 3:
@@ -97,8 +109,8 @@ class World:
 							brain.learn()
 
 							if agent[0] == self.focus and brain.total_experiences() % self.focus_visualize_frequency == 0:
-								self.check_agent(agent[0])
-								brain.visualize("AGENT#{}: {}".format(agent[0], agent[1]))
+								# self.check_agent(agent[0])
+								brain.visualize("AGENT#{}: {}".format(agent[0], agent[1]), time_limit=self.focus_visualize_time)
 						except:
 							pass
 	
@@ -115,16 +127,17 @@ class World:
 			agent[4] = max(1, min(agent[4], (self.display_width//self.grid_size)-2))
 			agent[5] = max(1, min(agent[5], (self.display_height//self.grid_size)-2))
 
+		for agent in self.agents:
 			# draw agent
 			self.draw_agent(agent[4], agent[5], agent[2], agent[3], agent[0])
 
 		pygame.display.update()
-		self.clock.tick(self.clock_speed)
+		self.clock.tick(self.world_speed)
 
 		pygame.display.set_caption("Seed: {}, FPS: {}".format(seed, round(self.clock.get_fps(),2)))
 
-	def experience(self, agent, X_1, X_2, sentiment):
-		agent[7].process_experience(X_1, X_2, sentiment)
+	def experience(self, agent, X, sentiment):
+		agent[7].process_experience(X, sentiment)
 
 	def draw_grid(self, grid_size):
 		for col in range((self.display_width//grid_size)+1):
@@ -198,16 +211,16 @@ class World:
 		print("Experiences: {}".format(agent[7].total_experiences()))
 
 
-World = World()
+Window = Window()
 
 while running:
-	World.main()
+	Window.main()
 
 	# events
 	for event in pygame.event.get():
 		if event.type == pygame.MOUSEBUTTONDOWN:
 			mouse_pos = pygame.mouse.get_pos()
-			World.click_world(mouse_pos[0], mouse_pos[1])
+			Window.click_world(mouse_pos[0], mouse_pos[1])
 
 		if event.type == pygame.QUIT: # quitting
 			running = False

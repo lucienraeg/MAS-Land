@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 import time
 import random
@@ -36,11 +37,11 @@ class Brain:
 
 		print("Brain: Inititiated")
 
-	def process_experience(self, X_1, X_2, sentiment, details=False):
+	def process_experience(self, X, sentiment, details=False):
 		self.X = self.X.tolist()
 		self.y = self.y.tolist()
 
-		self.X.append([X_1, X_2])
+		self.X.append(X)
 		self.y.append(sentiment)
 
 		self.X = np.array(self.X)
@@ -82,7 +83,7 @@ class Brain:
 	def predict(self, X):
 		return(self.clf.predict(X))
 
-	def visualize(self, title="", show_text=True, mesh_step_size=1):
+	def visualize(self, title="", show_text=True, mesh_step_size=0.1, show=True, time_limit=3600):
 		# step size in the mesh
 
 		start_time = time.time()
@@ -94,7 +95,7 @@ class Brain:
 		# plot setup
 		plt.figure(figsize=(6,6))
 		# cm = ListedColormap("#FFA0A0 #FFB8B8 #FFB0B0 #FFC8C8 #FFC0C0 #FFD0D0 #FFFFFF #E0FFE0 #D0FFD0 #D8FFD8 #C0FFC0 #C8FFC8 #B0FFB0".split())
-		cm = ListedColormap("#FFA0A0 #FFB0B0 #FFD0D0 #FFFFFF #C0FFC0 #B0FFB0 #A0FFA0".split())
+		cm = ListedColormap("#FFA0A0 #FFB0B0 #FFD0D0 #EEEEEE #C0FFC0 #B0FFB0 #A0FFA0".split())
 		cm_bold = ListedColormap(["#000000"])
 		ax = plt.subplot(1, 1, 1)
 
@@ -109,8 +110,8 @@ class Brain:
 		start_time = time.time()
 
 		# plot Z as contour
-		# ax.pcolormesh(xx, yy, self.Z, cmap=cm, alpha=1)
-		ax.contourf(xx, yy, self.Z, c=self.Z, cmap=cm, alpha=1)
+		ax.pcolormesh(xx, yy, self.Z, cmap=cm, alpha=1)
+		# ax.contourf(xx, yy, self.Z, cmap=cm, alpha=1)
 
 		# plot X as scatter
 		ax.scatter(self.X[:, 0], self.X[:, 1], c=self.y, cmap=cm_bold, marker="o", alpha=0.05)
@@ -118,22 +119,29 @@ class Brain:
 		ax.set_ylim(yy.min(), yy.max())
 		# ax.set_xticks(())
 		# ax.set_yticks(())
-		ax.set_xlabel("Color")
-		ax.set_ylabel("Shape")
+		ax.set_xlabel("X1")
+		ax.set_ylabel("X2")
 
+		dimensions = np.shape(self.X)[1]
 
-		ax.set_title(title)
+		ax.set_title("{} [2/{} dimensions]".format(title, dimensions))
 
 		if show_text:
-			ax.text(xx.min() + 0.1, yy.min() + 0.1, "n_samples={}".format(len(self.y)), size=12, horizontalalignment='left')
-			ax.text(xx.max() - 0.1, yy.min() + 0.1, "k={}".format(self.k), size=12, horizontalalignment='right')
+			# ax.text(xx.min() + 0.05, yy.max() - 0.1, "2/{} dimensions".format(dimensions), size=12, horizontalalignment='left')
+			ax.text(xx.min() + 0.05, yy.min() + 0.05, "n_samples={}".format(len(self.y)), size=12, horizontalalignment='left')
+			ax.text(xx.max() - 0.05, yy.min() + 0.05, "k={}".format(self.k), size=12, horizontalalignment='right')
 
 		print("Brain: Prepared visualization [{}s]".format(round(time.time() - start_time,5)))
 
-		# print(self.y)
+		start_show_time = time.time()
 
-		# show graph
-		plt.show()
+		if show:
+			plt.ion()
+			plt.pause(time_limit)
+			plt.close()
+
+		# return plot
+		return plt
 
 
 
@@ -154,4 +162,5 @@ if __name__ == "__main__":
 	brain.add_data(X_new, y_new)
 
 	brain.learn()
-	brain.visualize()
+	plt = brain.visualize()
+	plt.show()
