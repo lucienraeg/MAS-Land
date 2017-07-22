@@ -15,7 +15,7 @@ running = True
 
 random.seed(seed)
 
-class Window:
+class WorldWindow:
 
 	def __init__(self):
 		pygame.init()
@@ -27,6 +27,7 @@ class Window:
 
 		# init misc
 		self.clock = pygame.time.Clock()
+		self.clock_speed = 300
 		self.grid_size = 32
 
 		# init colors
@@ -74,24 +75,27 @@ class Window:
 
 					print("[AGENT#{}] Contact w/ #{}! pos=({},{})".format(agent[0], other_agent, a[1][0], a[1][1]))
 
-					other_color = self.agents[other_agent][2]
-					other_shape = self.agents[other_agent][3]
+					X_1 = self.agents[other_agent][2] # color
+					X_2 = self.agents[other_agent][3] # shape
 
-					if other_color == 0:
-						other_sentiment = -1
-					elif other_color == 2:
-						other_sentiment = 1
+					# decide sentiment
+					if X_1 == 0 and X_2 == 0:
+						self.experience(agent, X_1, X_2, 0)
+					elif X_1 == 2:
+						self.experience(agent, X_1, X_2, 0)
 					else:
-						other_sentiment = 0
-
-					brain.process_experience(other_color, other_shape, other_sentiment)
+						self.experience(agent, X_1, X_2, 1)
 
 					if brain.total_experiences() > 3:
-						brain.learn()
+						try:
+							brain.learn()
 
-						if agent[0] == 41:
-							brain.visualize("AGENT#{}: {}".format(agent[0], agent[1]))
-					
+							if agent[0] == 55 and brain.total_experiences() % 50 == 0:
+								self.check_agent(agent[0])
+								brain.visualize("AGENT#{}: {}".format(agent[0], agent[1]))
+						except:
+							pass
+	
 			# percieve area
 			potential_cells = eye.look(agent[4], agent[5])
 
@@ -109,9 +113,12 @@ class Window:
 			self.draw_agent(agent[4], agent[5], agent[2], agent[3], agent[0])
 
 		pygame.display.update()
-		self.clock.tick(2)
+		self.clock.tick(self.clock_speed)
 
 		pygame.display.set_caption("Seed: {}, FPS: {}".format(seed, round(self.clock.get_fps(),2)))
+
+	def experience(self, agent, X_1, X_2, sentiment):
+		agent[7].process_experience(X_1, X_2, sentiment)
 
 	def draw_grid(self, grid_size):
 		for col in range((self.display_width//grid_size)+1):
@@ -157,11 +164,22 @@ class Window:
 
 		print("[AGENT#{}] Created! number={}, name={}, color={}, shape={}({}), pos=({}, {})".format(number, number, name, color, shape, self.shapes[shape], start_x, start_y))
 
+	def check_agent(self, number):
+		agent = self.agents[number]
 
-Window = Window()
+		print("[AGENT#{}] Stats:".format(agent[0]))
+		print("Name: {}".format(agent[1]))
+		print("Color: {}".format(agent[2]))
+		print("Shape: {}".format(self.shapes[agent[3]]))
+		print("Pos: ({}, {})".format(agent[4], agent[5]))
+		print("Experiences: {}".format(agent[7].total_experiences()))
+
+
+
+WorldWindow = WorldWindow()
 
 while running:
-	Window.main()
+	WorldWindow.main()
 
 	# allow quitting
 	for event in pygame.event.get():

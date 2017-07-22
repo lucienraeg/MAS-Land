@@ -36,17 +36,17 @@ class Brain:
 
 		print("Brain: Inititiated")
 
-	def process_experience(self, color, shape, sentiment):
+	def process_experience(self, X_1, X_2, sentiment):
 		self.X = self.X.tolist()
 		self.y = self.y.tolist()
 
-		self.X.append([color, shape])
+		self.X.append([X_1, X_2])
 		self.y.append(sentiment)
 
 		self.X = np.array(self.X)
 		self.y = np.array(self.y)
 
-		print("Brain: Experience processed sentiment={}".format(color, shape, sentiment))
+		print("Brain: Experience processed! sentiment={}".format(sentiment))
 
 	def add_data(self, X_new, y_new):
 		# turn into list
@@ -79,18 +79,19 @@ class Brain:
 	def predict(self, X):
 		return(self.clf.predict(X))
 
-	def visualize(self, title, show_text=True, mesh_step_size=0.1):
+	def visualize(self, title="", show_text=True, mesh_step_size=0.1):
 		# step size in the mesh
 
 		start_time = time.time()
 
-		x_min, x_max = self.X[:, 0].min() - 0.2, self.X[:, 0].max() + 0.2
-		y_min, y_max = self.X[:, 1].min() - 0.2, self.X[:, 1].max() + 0.2
+		x_min, x_max = self.X[:, 0].min() - 0.3, self.X[:, 0].max() + 0.3
+		y_min, y_max = self.X[:, 1].min() - 0.3, self.X[:, 1].max() + 0.3
 		xx, yy = np.meshgrid(np.arange(x_min, x_max, mesh_step_size), np.arange(y_min, y_max, mesh_step_size))
 
 		# plot setup
 		plt.figure(figsize=(6,6))
 		cm_list = "#FFA0A0 #FFB8B8 #FFB0B0 #FFC8C8 #FFC0C0 #FFD0D0 #FFFFFF #E0FFE0 #D0FFD0 #D8FFD8 #C0FFC0 #C8FFC8 #B0FFB0".split()
+		# cm_list = "#FFA0A0 #FFFFFF #B0FFB0".split()
 		cm = ListedColormap(cm_list)
 		# cm_bold = ListedColormap(["#FF0000", "#00FF00"])
 		cm_bold = ListedColormap(["#000000"])
@@ -107,14 +108,15 @@ class Brain:
 		start_time = time.time()
 
 		# plot Z as contour
-		ax.contourf(xx, yy, self.Z, cmap=cm, alpha=1)
+		# ax.pcolormesh(xx, yy, self.Z, cmap=cm, alpha=1)
+		ax.contourf(xx, yy, self.Z, c=self.Z, cmap=cm, alpha=1)
 
 		# plot X as scatter
-		ax.scatter(self.X[:, 0], self.X[:, 1], c=self.y, cmap=cm_bold, marker="x", alpha=0.1)
+		ax.scatter(self.X[:, 0], self.X[:, 1], c=self.y, cmap=cm_bold, marker="o", alpha=0.05)
 		ax.set_xlim(xx.min(), xx.max())
 		ax.set_ylim(yy.min(), yy.max())
-		ax.set_xticks(())
-		ax.set_yticks(())
+		# ax.set_xticks(())
+		# ax.set_yticks(())
 		ax.set_xlabel("Color")
 		ax.set_ylabel("Shape")
 
@@ -149,4 +151,4 @@ if __name__ == "__main__":
 	brain.add_data(X_new, y_new)
 
 	brain.learn()
-	brain.visualize("Toy Set")
+	brain.visualize()
