@@ -23,7 +23,7 @@ class Window:
 		pygame.init()
 
 		# init display
-		self.display_width = 32*30
+		self.display_width = 32*40
 		self.display_height = 32*30
 		self.side_display_width = 32*20
 		self.side_display_height = 32*0
@@ -31,14 +31,21 @@ class Window:
 
 		# init misc
 		self.clock = pygame.time.Clock()
-		self.world_speed = 20
+		self.world_speed = 300
 		self.grid_size = 32
 		self.total_steps = 0
 
 		# init focus
 		self.focus = None # default = None
+		self.focus_msg = ("Initiated",0)
+
+		# init focus graphs
+		self.focus_graphs = False
 		self.focus_visualize_frequency = 5 # how many steps between
 		self.focus_visualize_time = 1 # in seconds
+
+		# init sidebar values
+		self.brain_map_frequency = 10 # every n experiences
 
 		# init colors
 		self.WHITE = (255, 255, 255)
@@ -49,27 +56,32 @@ class Window:
 		self.BLUE = (0, 0, 255)
 		self.YELLOW = (255, 255, 0)
 
-		self.LT_RED = (255, 50, 50)
-		self.LT_GREEN = (50, 255, 50)
+		self.LT_RED = (255, 122, 122)
+		self.LT_GREEN = (122, 255, 122)
 
 		# init font
 		self.FNT_SMALL = pygame.font.SysFont("arial", 11)
 		self.FNT_MEDIUM = pygame.font.SysFont("arial", 14)
+		self.FNT_LARGE = pygame.font.SysFont("arial", 16)
 
 		# init dicts
 		self.colors = {0: self.RED, 1: self.GREEN, 2: self.BLUE}
+		self.color_names = {0: "red", 1: "green", 2: "blue"}
 		self.shapes = {0: "square", 1: "circle", 2: "triangle"}
-		self.sentiments = {-1: "negative", 0: "neutral", 1: "positive"}
-		self.sentiment_colors = {-1: self.LT_RED, 0: self.GRAY, 1: self.LT_GREEN}
+		self.sentiments = {-2: "very negative", -1: "negative", 0: "neutral", 1: "positive", 2: "very positive"}
+		self.sentiment_colors = {-2: self.RED, -1: self.LT_RED, 0: self.GRAY, 1: self.LT_GREEN, 2: self.GREEN}
+		self.sentiment_colors_alt = {-2: self.RED, -1: self.LT_RED, 0: self.BLACK, 1: self.LT_GREEN, 2: self.GREEN}
 
 		# init agents
-		starting_agents = 32
+		starting_agents = 64
 		self.agents = []
 		for i in range(starting_agents):
 			self.create_agent(i)
 
 	def main(self):
 		self.display.fill(self.WHITE)
+
+		self.mouse_x, self.mouse_y = pygame.mouse.get_pos()
 
 		self.draw_grid(self.grid_size)
 
@@ -99,25 +111,28 @@ class Window:
 					X_2 = other_shape
 
 					# decide sentiment (label)
-					if other_color == 0 and other_shape == 0:
-						sent = -1
-					elif other_color == 2:
-						sent = 1
-					else:
-						sent = 0
+					sent = self.decide_sentiment(agent, other_color, other_shape)
 
 					# experience
 					self.experience(agent, [X_1, X_2], sent)
 
+					if brain.total_experiences() % self.brain_map_frequency == 0:
+						try:
+							new_sent = agent[7].predict([[X_1, X_2]])
+							agent[9][X_1][X_2] = new_sent
+						except:
+							pass
+
 					# print experience
 					if agent[0] == self.focus:
 						print("[AGENT#{}] Experience w/ #{}! sentiment={}".format(agent[0], other_agent, self.sentiments[sent]))
+						self.focus_msg = ("#{}, {}, {}, {}".format(other_agent, self.color_names[other_color], self.shapes[other_shape], self.sentiments[sent]), sent)
 
 					# learn from experiences
 					if brain.total_experiences() > 3:
 						brain.learn()
 
-						if agent[0] == self.focus and brain.total_experiences() % self.focus_visualize_frequency == 0:
+						if agent[0] == self.focus and self.focus_graphs and brain.total_experiences() % self.focus_visualize_frequency == 0:
 							# self.check_agent(agent[0])
 							brain.visualize("AGENT#{}: {}".format(agent[0], agent[1]), time_limit=self.focus_visualize_time)
 	
@@ -148,6 +163,23 @@ class Window:
 
 	def experience(self, agent, X, sentiment):
 		agent[7].process_experience(X, sentiment)
+		agent[10].append(sentiment)
+
+	def decide_sentiment(self, agent, X_1, X_2):
+		if X_1 == 0:
+			if X_2 == 0:
+				sent = -2
+			else:
+				sent = -1
+		elif X_1 == 1:
+			if X_2 == 1:
+				sent = 2
+			else:
+				sent= 1
+		elif X_1 == 2:
+				sent = 0
+
+		return sent
 
 	def draw_grid(self, grid_size):
 		for col in range((self.display_width//grid_size)+1):
@@ -160,15 +192,7 @@ class Window:
 		x = x*self.grid_size+(self.grid_size//2)
 		y = y*self.grid_size+(self.grid_size//2)
 
-		if self.shapes[shape] == "square":
-			pygame.draw.rect(self.display, self.colors[color], (x-10, y-10, 20, 20))
-			pygame.draw.rect(self.display, self.BLACK, (x-11, y-11, 22, 22), 3)
-		elif self.shapes[shape] == "circle":
-			pygame.draw.circle(self.display, self.colors[color], (x, y), 12)
-			pygame.draw.circle(self.display, self.BLACK, (x, y), 13, 3)
-		elif self.shapes[shape] == "triangle":
-			pygame.draw.polygon(self.display, self.colors[color], ((x, y-10), (x-10, y+10), (x+10, y+10)))
-			pygame.draw.polygon(self.display, self.BLACK, ((x, y-12), (x-12, y+12), (x+12, y+12)), 3)
+		self.draw_agent_body(x, y, color, shape)
 
 		num = self.FNT_SMALL.render("#{}".format(number), True, self.BLACK)
 		num_rect = num.get_rect(center=(x,y-20))
@@ -181,6 +205,17 @@ class Window:
 		if number == self.focus:
 			pygame.draw.circle(self.display, self.YELLOW, (x, y), 6)
 
+	def draw_agent_body(self, x, y, color, shape):
+		if self.shapes[shape] == "square":
+			pygame.draw.rect(self.display, self.colors[color], (x-10, y-10, 20, 20))
+			pygame.draw.rect(self.display, self.BLACK, (x-11, y-11, 22, 22), 3)
+		elif self.shapes[shape] == "circle":
+			pygame.draw.circle(self.display, self.colors[color], (x, y), 12)
+			pygame.draw.circle(self.display, self.BLACK, (x, y), 13, 3)
+		elif self.shapes[shape] == "triangle":
+			pygame.draw.polygon(self.display, self.colors[color], ((x, y-10), (x-10, y+10), (x+10, y+10)))
+			pygame.draw.polygon(self.display, self.BLACK, ((x, y-12), (x-12, y+12), (x+12, y+12)), 3)
+
 	def create_agent(self, number):
 		name = names[number]
 		color = random.choice([0, 1, 2]) # red, green, blue
@@ -191,8 +226,9 @@ class Window:
 		brain = agent.Brain()
 		muscle = agent.Muscle()
 		brain_map = [[0,0,0],[0,0,0],[0,0,0]]
+		experience_history = []
 
-		self.agents.append([number, name, color, shape, start_x, start_y, eye, brain, muscle, brain_map])
+		self.agents.append([number, name, color, shape, start_x, start_y, eye, brain, muscle, brain_map, experience_history])
 
 		print("[AGENT#{}] Created! number={}, name={}, color={}, shape={}({}), pos=({}, {})".format(number, number, name, color, shape, self.shapes[shape], start_x, start_y))
 
@@ -226,6 +262,7 @@ class Window:
 		self.display.blit(basic_info, (x,y))
 
 		# brain maps
+		section_1_y = 48
 		columns = 15
 		rows = (len(self.agents) // columns)+1
 		size = 36
@@ -235,7 +272,7 @@ class Window:
 
 				if num <= len(self.agents)-1:
 					x1 = x+xx*(size+4)
-					y1 = y+yy*(size+16)+48
+					y1 = y+yy*(size+16)+section_1_y
 
 					# draw number
 					name = self.FNT_SMALL.render("#{}".format(num), True, self.BLACK)
@@ -249,24 +286,68 @@ class Window:
 					try:
 						for sentx in range(3):
 							for senty in range(3):
-								sent = self.agents[num][7].predict([[sentx, senty]])
-
-								self.agents[num][9][sentx][senty] = sent
-
-								col = self.sentiment_colors[sent]
+								col = self.sentiment_colors[self.agents[num][9][sentx][senty]]
 
 								pygame.draw.rect(self.display, col, (x1+(sentx*(size/3)), y1+(senty*(size/3)), size/3, size/3))
-
-						# print(self.agents[num][9])
-
+ 
 					except sklearn.exceptions.NotFittedError:
 						name = self.FNT_SMALL.render("?", True, self.BLACK)
 						name_rect = name.get_rect(center=(x1+(size/2),y1+(size/2)))
 						self.display.blit(name, name_rect)
 
+					# draw highlight box				
+					if x1 < self.mouse_x < x1+size and y1 < self.mouse_y < y1+size and self.focus != num:
+						pygame.draw.rect(self.display, self.BLACK, (x1, y1, size, size), 1)
+
+						if pygame.mouse.get_pressed()[0]:
+							self.focus = num
+
+					if self.focus == num:
+						pygame.draw.rect(self.display, self.BLACK, (x1, y1, size, size), 3)
+
 					# increment num
 					num += 1
 
+		# agent focus
+		section_2_y = section_1_y + (rows*(size+16)) + 32
+		if self.focus != None:
+			a = self.agents[self.focus]
+
+			agent_title = self.FNT_LARGE.render("AGENT#{}: {}".format(a[0], a[1]), True, self.BLACK, self.GRAY)
+			self.display.blit(agent_title, (x,y+section_2_y))
+
+			# agent info text
+			agent_color = self.FNT_MEDIUM.render("Color: {} ({})".format(self.color_names[a[2]].title(), a[2]), True, self.BLACK)
+			agent_shape = self.FNT_MEDIUM.render("Shape: {} ({})".format(self.shapes[a[3]], a[3]).title(), True, self.BLACK)
+			agent_pos = self.FNT_MEDIUM.render("Pos: ({}, {})".format(a[4], a[5]).title(), True, self.BLACK)
+
+			self.display.blit(agent_color, (x+32,y+section_2_y+20))
+			self.display.blit(agent_shape, (x+32,y+section_2_y+20+16))
+			self.display.blit(agent_pos, (x,y+section_2_y+20+32))
+
+			self.draw_agent_body(x+16, y+section_2_y+20+16, a[2], a[3])
+
+			# agent experience history
+			exp_size = 4
+			exp_shown_length = 368//exp_size
+
+			for i, exp in enumerate(a[10][-exp_shown_length:]):
+				pygame.draw.rect(self.display, self.sentiment_colors[exp], ((x+220)+i*exp_size, y+section_2_y+20, exp_size, 30))
+
+			agent_experiences = self.FNT_MEDIUM.render("Total Experiences: {}".format(a[7].total_experiences()), True, self.BLACK)
+			self.display.blit(agent_experiences, (x+220,y+section_2_y+20+32))
+
+			agent_focus_msg = self.FNT_MEDIUM.render("{}".format(self.focus_msg[0]), True, self.sentiment_colors_alt[self.focus_msg[1]])
+			agent_focus_msg_rect = agent_focus_msg.get_rect()
+			agent_focus_msg_rect.right = x+220+368
+			agent_focus_msg_rect.top = y+section_2_y
+			self.display.blit(agent_focus_msg, agent_focus_msg_rect)
+
+			agent_experience_rate = self.FNT_MEDIUM.render("{} per ksteps".format(round(a[7].total_experiences()/self.total_steps*1000)), True, self.BLACK)
+			agent_experience_rate_rect = agent_experience_rate.get_rect()
+			agent_experience_rate_rect.right = x+220+368
+			agent_experience_rate_rect.top = y+section_2_y+20+32
+			self.display.blit(agent_experience_rate, agent_experience_rate_rect)
 
 
 
@@ -275,11 +356,12 @@ Window = Window()
 while running:
 	Window.main()
 
+	mouse_pos = pygame.mouse.get_pos()
+
 	# events
 	for event in pygame.event.get():
-		if event.type == pygame.MOUSEBUTTONDOWN:
-			mouse_pos = pygame.mouse.get_pos()
-			Window.click_world(mouse_pos[0], mouse_pos[1])
+		# if event.type == pygame.MOUSEBUTTONDOWN:
+		# 	Window.click_world(mouse_pos[0], mouse_pos[1])
 
 		if event.type == pygame.QUIT: # quitting
 			running = False
