@@ -2,6 +2,8 @@ import pygame
 import random
 import csv
 import agent
+import numpy as np
+import sklearn
 
 names = []
 
@@ -22,17 +24,20 @@ class Window:
 
 		# init display
 		self.display_width = 32*30
-		self.display_height = 32*20
-		self.display = pygame.display.set_mode((self.display_width, self.display_height))
+		self.display_height = 32*30
+		self.side_display_width = 32*20
+		self.side_display_height = 32*0
+		self.display = pygame.display.set_mode((self.display_width+self.side_display_width, self.display_height+self.side_display_height))
 
 		# init misc
 		self.clock = pygame.time.Clock()
-		self.world_speed = 300
+		self.world_speed = 20
 		self.grid_size = 32
+		self.total_steps = 0
 
 		# init focus
-		self.focus = 55 # default = None
-		self.focus_visualize_frequency = 3 # how many steps between
+		self.focus = None # default = None
+		self.focus_visualize_frequency = 5 # how many steps between
 		self.focus_visualize_time = 1 # in seconds
 
 		# init colors
@@ -44,16 +49,21 @@ class Window:
 		self.BLUE = (0, 0, 255)
 		self.YELLOW = (255, 255, 0)
 
+		self.LT_RED = (255, 50, 50)
+		self.LT_GREEN = (50, 255, 50)
+
 		# init font
 		self.FNT_SMALL = pygame.font.SysFont("arial", 11)
+		self.FNT_MEDIUM = pygame.font.SysFont("arial", 14)
 
 		# init dicts
 		self.colors = {0: self.RED, 1: self.GREEN, 2: self.BLUE}
 		self.shapes = {0: "square", 1: "circle", 2: "triangle"}
 		self.sentiments = {-1: "negative", 0: "neutral", 1: "positive"}
+		self.sentiment_colors = {-1: self.LT_RED, 0: self.GRAY, 1: self.LT_GREEN}
 
 		# init agents
-		starting_agents = 64
+		starting_agents = 32
 		self.agents = []
 		for i in range(starting_agents):
 			self.create_agent(i)
@@ -105,14 +115,11 @@ class Window:
 
 					# learn from experiences
 					if brain.total_experiences() > 3:
-						try:
-							brain.learn()
+						brain.learn()
 
-							if agent[0] == self.focus and brain.total_experiences() % self.focus_visualize_frequency == 0:
-								# self.check_agent(agent[0])
-								brain.visualize("AGENT#{}: {}".format(agent[0], agent[1]), time_limit=self.focus_visualize_time)
-						except:
-							pass
+						if agent[0] == self.focus and brain.total_experiences() % self.focus_visualize_frequency == 0:
+							# self.check_agent(agent[0])
+							brain.visualize("AGENT#{}: {}".format(agent[0], agent[1]), time_limit=self.focus_visualize_time)
 	
 			# percieve area
 			potential_cells = eye.look(agent[4], agent[5])
@@ -131,8 +138,11 @@ class Window:
 			# draw agent
 			self.draw_agent(agent[4], agent[5], agent[2], agent[3], agent[0])
 
+		self.display_sidebar(self.display_width+16, 8)
+
 		pygame.display.update()
 		self.clock.tick(self.world_speed)
+		self.total_steps += 1
 
 		pygame.display.set_caption("Seed: {}, FPS: {}".format(seed, round(self.clock.get_fps(),2)))
 
@@ -180,8 +190,9 @@ class Window:
 		eye = agent.Eye()
 		brain = agent.Brain()
 		muscle = agent.Muscle()
+		brain_map = [[0,0,0],[0,0,0],[0,0,0]]
 
-		self.agents.append([number, name, color, shape, start_x, start_y, eye, brain, muscle])
+		self.agents.append([number, name, color, shape, start_x, start_y, eye, brain, muscle, brain_map])
 
 		print("[AGENT#{}] Created! number={}, name={}, color={}, shape={}({}), pos=({}, {})".format(number, number, name, color, shape, self.shapes[shape], start_x, start_y))
 
@@ -209,6 +220,54 @@ class Window:
 		print("Shape: {}".format(self.shapes[agent[3]]))
 		print("Pos: ({}, {})".format(agent[4], agent[5]))
 		print("Experiences: {}".format(agent[7].total_experiences()))
+
+	def display_sidebar(self, x, y):
+		basic_info = self.FNT_MEDIUM.render("Steps: {}".format(self.total_steps), True, self.BLACK)
+		self.display.blit(basic_info, (x,y))
+
+		# brain maps
+		columns = 15
+		rows = (len(self.agents) // columns)+1
+		size = 36
+		num = 0
+		for yy in range(rows):
+			for xx in range(columns):
+
+				if num <= len(self.agents)-1:
+					x1 = x+xx*(size+4)
+					y1 = y+yy*(size+16)+48
+
+					# draw number
+					name = self.FNT_SMALL.render("#{}".format(num), True, self.BLACK)
+					name_rect = name.get_rect(center=(x1+(size/2),y1-8))
+					self.display.blit(name, name_rect)
+
+					# draw base
+					pygame.draw.rect(self.display, self.GRAY, (x1, y1, size, size))
+
+					# draw contour
+					try:
+						for sentx in range(3):
+							for senty in range(3):
+								sent = self.agents[num][7].predict([[sentx, senty]])
+
+								self.agents[num][9][sentx][senty] = sent
+
+								col = self.sentiment_colors[sent]
+
+								pygame.draw.rect(self.display, col, (x1+(sentx*(size/3)), y1+(senty*(size/3)), size/3, size/3))
+
+						# print(self.agents[num][9])
+
+					except sklearn.exceptions.NotFittedError:
+						name = self.FNT_SMALL.render("?", True, self.BLACK)
+						name_rect = name.get_rect(center=(x1+(size/2),y1+(size/2)))
+						self.display.blit(name, name_rect)
+
+					# increment num
+					num += 1
+
+
 
 
 Window = Window()

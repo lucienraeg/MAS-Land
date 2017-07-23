@@ -81,7 +81,7 @@ class Brain:
 			print("Brain: Fitted {} samples [{}s]".format(len(self.y),round(time.time() - start_time,5)))
 
 	def predict(self, X):
-		return(self.clf.predict(X))
+		return self.clf.predict(X)[0]
 
 	def visualize(self, title="", show_text=True, mesh_step_size=0.1, show=True, time_limit=3600):
 		# step size in the mesh
@@ -117,10 +117,12 @@ class Brain:
 		ax.scatter(self.X[:, 0], self.X[:, 1], c=self.y, cmap=cm_bold, marker="o", alpha=0.05)
 		ax.set_xlim(xx.min(), xx.max())
 		ax.set_ylim(yy.min(), yy.max())
-		# ax.set_xticks(())
-		# ax.set_yticks(())
-		ax.set_xlabel("X1")
-		ax.set_ylabel("X2")
+		ax.set_xticks(np.arange(3))
+		ax.set_yticks(np.arange(3))
+
+		plt.gca().invert_yaxis()
+		# ax.set_xlabel("X1")
+		# ax.set_ylabel("X2")
 
 		dimensions = np.shape(self.X)[1]
 
