@@ -31,7 +31,7 @@ class Window:
 
 		# init misc
 		self.clock = pygame.time.Clock()
-		self.world_speed = 300
+		self.world_speed = 144 # default = 144
 		self.grid_size = 32
 		self.total_steps = 0
 
@@ -73,7 +73,7 @@ class Window:
 		self.sentiment_colors_alt = {-2: self.RED, -1: self.LT_RED, 0: self.BLACK, 1: self.LT_GREEN, 2: self.GREEN}
 
 		# init agents
-		starting_agents = 64
+		starting_agents = 32
 		self.agents = []
 		for i in range(starting_agents):
 			self.create_agent(i)
@@ -349,6 +349,60 @@ class Window:
 			agent_experience_rate_rect.top = y+section_2_y+20+32
 			self.display.blit(agent_experience_rate, agent_experience_rate_rect)
 
+		# agent sections
+		section_3_y = section_2_y + 128
+		if self.focus != None:
+			a = self.agents[self.focus]
+
+			# eye
+			x1, y1 = x, section_3_y
+
+			agent_pos_list = []
+			for agent in self.agents:
+				agent_pos_list.append((agent[4], agent[5]))
+
+			width, height = (160//10)-1, (160//10)-1
+			for yy in range(height):
+				for xx in range(width):
+					posxx = a[4]-7+xx
+					posyy = a[5]-7+yy
+
+					if xx == 7 and yy == 7:
+						col = self.BLACK
+					else:
+						col = self.GRAY
+
+						for a_num, a_pos in enumerate(agent_pos_list):
+							if a_pos[0] == posxx and a_pos[1] == posyy:
+								col = self.colors[self.agents[a_num][2]]
+								break
+
+					pygame.draw.rect(self.display, col, (x1+(xx*10)+6, y1+(yy*10)+6, 9, 9))
+
+			text = self.FNT_LARGE.render("Eye", True, self.BLACK)
+			self.display.blit(text, (x1, y1-24))
+			pygame.draw.rect(self.display, self.BLACK, (x1, y1, 160, 160), 2)
+
+			# eye to brain link
+			pygame.draw.line(self.display, self.BLACK, (x1+160, y1+80), (x1+220, y1+80), 2)
+
+			# brain
+			x1, y1 = x+220, section_3_y
+
+			text = self.FNT_LARGE.render("Brain", True, self.BLACK)
+			self.display.blit(text, (x1, y1-24))
+			pygame.draw.rect(self.display, self.BLACK, (x1, y1, 160, 160), 2)
+
+			# brain to muscle link
+			pygame.draw.line(self.display, self.BLACK, (x1+160, y1+80), (x1+220, y1+80), 2)
+
+			# muscle
+			x1, y1 = x+440, section_3_y
+
+			text = self.FNT_LARGE.render("Muscle", True, self.BLACK)
+			self.display.blit(text, (x1, y1-24))
+			pygame.draw.rect(self.display, self.BLACK, (x1, y1, 160, 160), 2)
+
 
 
 Window = Window()
@@ -360,9 +414,6 @@ while running:
 
 	# events
 	for event in pygame.event.get():
-		# if event.type == pygame.MOUSEBUTTONDOWN:
-		# 	Window.click_world(mouse_pos[0], mouse_pos[1])
-
 		if event.type == pygame.QUIT: # quitting
 			running = False
 

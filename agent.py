@@ -9,6 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.datasets import make_moons
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
 
 style.use('ggplot')
 
@@ -31,7 +32,7 @@ class Brain:
 
 	def __init__(self, k=3, *args, **kwargs):
 		self.k = k
-		self.clf = KNeighborsClassifier(self.k)
+		self.clf = KNeighborsClassifier(n_neighbors=self.k, algorithm="ball_tree", weights="uniform", n_jobs=1)
 		self.X = np.array([])
 		self.y = np.array([])
 
