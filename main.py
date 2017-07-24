@@ -34,7 +34,7 @@ class Window:
 		self.grid_size = 32
 		self.total_steps = 0
 
-		full_capacity = True
+		full_capacity = False
 
 		if full_capacity:
 			self.world_speed = 300
@@ -82,9 +82,10 @@ class Window:
 		self.sentiment_colors = {-2: self.RED, -1: self.LT_RED, 0: self.GRAY, 1: self.LT_GREEN, 2: self.GREEN}
 		self.sentiment_colors_alt = {-2: self.RED, -1: self.LT_RED, 0: self.BLACK, 1: self.LT_GREEN, 2: self.GREEN}
 		self.biomes = {-1: "limbo", 0: "bme0", 1: "bme1", 2: "bme2", 3: "bme3"}
+		self.directions = {0: "N", 1: "E", 2: "S", 3: "W"}
 
 		# init agents
-		starting_agents = 30
+		starting_agents = 120 # max = 120
 		self.agents = []
 		for i in range(starting_agents):
 			self.create_agent(i)
@@ -182,27 +183,17 @@ class Window:
 	def decide_sentiment(self, agent, X_1, X_2, X_3):
 		sent = 0
 
-		if agent[2] == 0: # red
-			if X_1 == 1:
-				sent = -2
-			else:
-				sent = 2
-		elif agent[2] == 1: # green
-			if X_1 == 2:
-				sent = -2
-			else:
-				sent = 2
-		elif agent[2] == 2: # blue
-			if X_1 == 0:
-				sent = -2
-			else:
-				sent = 2
+		# if X_1 == 0 and X_2 == 0:
+		# 	sent = -2
+		# elif X_1 == 0:
+		# 	sent = -1
+		# elif X_1 == 2:
+		# 	sent = 1
 
-		if agent[3] == X_2:
-			sent = 1
-
-		if agent[2] == X_1:
-			sent = -1
+		if X_1 == 0:
+			sent = -2
+		elif X_1 == 2:
+			sent = 2
 
 		return sent
 
@@ -477,26 +468,44 @@ class Window:
 				# get average sent for the section
 				sect[4] = sum(sect_sents) / len(sect_sents)
 
+			# choose the highest avg sect as the direction
+			sect_list = [sect_n[4], sect_e[4], sect_s[4], sect_w[4]]
+			best_sects = [i for i, j in enumerate(sect_list) if j == max(sect_list)]
+			chosen_sect = random.choice(best_sects)
+
 			# visualization of muscle preference
 			pygame.draw.rect(self.display, self.BLACK, (x1+80-8, y1+80-8, 16, 16))
 
 			# draw lines for each direction (NSWE)
 			if sect_n[4] >= 0: col = self.GREEN
 			else: col = self.RED
-			pygame.draw.line(self.display, col, (x1+80, y1+80-8), (x1+80, y1+80-8-abs(sect_n[4]*48)), 7)
+			pygame.draw.line(self.display, col, (x1+80, y1+80-8), (x1+80, y1+80-8-min(64, abs(sect_n[4]*32))), 9)
+
 			if sect_s[4] >= 0: col = self.GREEN
 			else: col = self.RED
-			pygame.draw.line(self.display, col, (x1+80, y1+80+8), (x1+80, y1+80+8+abs(sect_s[4]*48)), 7)
+			pygame.draw.line(self.display, col, (x1+80, y1+80+8), (x1+80, y1+80+8+min(64, abs(sect_s[4]*32))), 9)
+
 			if sect_w[4] >= 0: col = self.GREEN
 			else: col = self.RED
-			pygame.draw.line(self.display, col, (x1+80-8, y1+80), (x1+80-8-abs(sect_w[4]*48), y1+80), 7)
+			pygame.draw.line(self.display, col, (x1+80-8, y1+80), (x1+80-8-min(64, abs(sect_w[4]*32)), y1+80), 9)
+
 			if sect_e[4] >= 0: col = self.GREEN
 			else: col = self.RED
-			pygame.draw.line(self.display, col, (x1+80+8, y1+80), (x1+80+8+abs(sect_e[4]*48), y1+80), 7)
+			pygame.draw.line(self.display, col, (x1+80+8, y1+80), (x1+80+8+min(64, abs(sect_e[4]*32)), y1+80), 9)
 
+			# text for chosen direction
+			text = self.FNT_LARGE.render("{}".format(self.directions[chosen_sect]), True, self.BLACK)
+			self.display.blit(text, (x1+4, y1+4))
 
-			# text = self.FNT_SMALL.render("{}, {}, {}, {}".format(sect_n[4], sect_e[4], sect_s[4], sect_w[4]), True, self.BLACK)
-			# self.display.blit(text, (x1+4, y1+4))
+			# point line in chosen direction
+			if chosen_sect == 0:
+				pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80, y1+80-8-64), 3)
+			elif chosen_sect == 1:
+				pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80+8+64, y1+80), 3)
+			elif chosen_sect == 2:
+				pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80, y1+80+8+64), 3)
+			elif chosen_sect == 3:
+				pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80-8-64, y1+80), 3)
 
 			text = self.FNT_LARGE.render("Muscle", True, self.BLACK)
 			self.display.blit(text, (x1, y1-24))
