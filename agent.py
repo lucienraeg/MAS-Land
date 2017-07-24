@@ -21,7 +21,7 @@ class Eye:
 	def look(self, x, y):
 		potential_cells = []
 
-		for cell in [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)]:
+		for cell in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
 			potential_cells.append((x+cell[0], y+cell[1]))
 
 		# move_pos = random.choice(potential_cells)

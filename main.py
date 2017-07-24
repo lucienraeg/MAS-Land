@@ -182,17 +182,17 @@ class Window:
 	def decide_sentiment(self, agent, X_1, X_2, X_3):
 		sent = 0
 
-		if agent[2] == 0:
+		if agent[2] == 0: # red
 			if X_1 == 1:
 				sent = -2
 			else:
 				sent = 2
-		elif agent[2] == 1:
+		elif agent[2] == 1: # green
 			if X_1 == 2:
 				sent = -2
 			else:
 				sent = 2
-		elif agent[2] == 2:
+		elif agent[2] == 2: # blue
 			if X_1 == 0:
 				sent = -2
 			else:
@@ -200,6 +200,9 @@ class Window:
 
 		if agent[3] == X_2:
 			sent = 1
+
+		if agent[2] == X_1:
+			sent = -1
 
 		return sent
 
@@ -382,12 +385,15 @@ class Window:
 			# eye
 			x1, y1 = x, section_3_y
 
+			agent_list = []
 			agent_pos_list = []
 			for agent in self.agents:
-				agent_pos_list.append((agent[4], agent[5]))
+				if a[4]-4 < agent[4] < a[4]+4 and a[5]-4 < agent[5] < a[5]+4:
+					agent_list.append(agent)
+					agent_pos_list.append((agent[4], agent[5]))
 
-			# td minimap
-			width, height = (160//20)-1, (160//20)-1
+			# td minimap for eye
+			width, height = 7, 7
 			for yy in range(height):
 				for xx in range(width):
 					posxx = a[4]-3+xx
@@ -402,7 +408,7 @@ class Window:
 
 						for a_num, a_pos in enumerate(agent_pos_list):
 							if a_pos[0] == posxx and a_pos[1] == posyy:
-								col = self.colors[self.agents[a_num][2]]
+								col = self.DK_GRAY
 								txt = self.agents[a_num][0]
 
 					pygame.draw.rect(self.display, col, (x1+(xx*20)+11, y1+(yy*20)+11, 19, 19))
@@ -426,14 +432,15 @@ class Window:
 			self.display.blit(text, (x1, y1-24))
 			pygame.draw.rect(self.display, self.BLACK, (x1, y1, 160, 160), 2)
 
-			# td minimap
-			width, height = 5, 5
+			# td minimap for brain
+			width, height = 7, 7
+			sent_grid = [[0]*width]*height
 			for yy in range(height):
 				for xx in range(width):
-					posxx = a[4]-2+xx
-					posyy = a[5]-2+yy
+					posxx = a[4]-3+xx
+					posyy = a[5]-3+yy
 
-					if xx == 2 and yy == 2:
+					if xx == 3 and yy == 3:
 						col = self.BLACK
 					else:
 						col = self.GRAY
@@ -441,23 +448,55 @@ class Window:
 						for a_num, a_pos in enumerate(agent_pos_list):
 							if a_pos[0] == posxx and a_pos[1] == posyy:
 								try:
-									sent = self.agents[a_num][7].predict([[self.agents[a_num][2], self.agents[a_num][3], -1]])
-									col = self.sentiment_colors_alt[sent]
+									sent_grid[xx][yy] = self.agents[a_num][7].predict([[self.agents[a_num][2], self.agents[a_num][3], -1]])
+									col = self.sentiment_colors_alt[sent_grid[xx][yy]]
 								except:
 									col = self.DK_GRAY
 
-					pygame.draw.rect(self.display, col, (x1+(xx*20)+32, y1+(yy*20)+32, 19, 19))
-
-			# sent summary
-
+					pygame.draw.rect(self.display, col, (x1+(xx*20)+10, y1+(yy*20)+10, 19, 19))
 
 			# brain to muscle link
 			pygame.draw.line(self.display, self.BLACK, (x1+160, y1+80), (x1+220, y1+80), 2)
 
-
-
 			# muscle
 			x1, y1 = x+440, section_3_y
+
+			# section coords, last value is the average
+			sect_n = [0, 0, 6, 2, 0]
+			sect_e = [4, 0, 6, 6, 0]
+			sect_s = [0, 4, 6, 6, 0]
+			sect_w = [0, 0, 2, 6, 0]
+
+			for sect in [sect_n, sect_e, sect_s, sect_w]:
+				sect_sents = []
+
+				for yy in range(sect[1], sect[3]):
+					for xx in range(sect[0], sect[2]):
+						sect_sents.append(sent_grid[xx][yy])
+
+				# get average sent for the section
+				sect[4] = sum(sect_sents) / len(sect_sents)
+
+			# visualization of muscle preference
+			pygame.draw.rect(self.display, self.BLACK, (x1+80-8, y1+80-8, 16, 16))
+
+			# draw lines for each direction (NSWE)
+			if sect_n[4] >= 0: col = self.GREEN
+			else: col = self.RED
+			pygame.draw.line(self.display, col, (x1+80, y1+80-8), (x1+80, y1+80-8-abs(sect_n[4]*48)), 7)
+			if sect_s[4] >= 0: col = self.GREEN
+			else: col = self.RED
+			pygame.draw.line(self.display, col, (x1+80, y1+80+8), (x1+80, y1+80+8+abs(sect_s[4]*48)), 7)
+			if sect_w[4] >= 0: col = self.GREEN
+			else: col = self.RED
+			pygame.draw.line(self.display, col, (x1+80-8, y1+80), (x1+80-8-abs(sect_w[4]*48), y1+80), 7)
+			if sect_e[4] >= 0: col = self.GREEN
+			else: col = self.RED
+			pygame.draw.line(self.display, col, (x1+80+8, y1+80), (x1+80+8+abs(sect_e[4]*48), y1+80), 7)
+
+
+			# text = self.FNT_SMALL.render("{}, {}, {}, {}".format(sect_n[4], sect_e[4], sect_s[4], sect_w[4]), True, self.BLACK)
+			# self.display.blit(text, (x1+4, y1+4))
 
 			text = self.FNT_LARGE.render("Muscle", True, self.BLACK)
 			self.display.blit(text, (x1, y1-24))
