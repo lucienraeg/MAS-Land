@@ -23,8 +23,8 @@ class Window:
 		pygame.init()
 
 		# init display
-		self.display_width = 32*40
-		self.display_height = 32*25
+		self.display_width = 32*15 # default = 32*40
+		self.display_height = 32*15 # default = 32*30
 		self.side_display_width = 32*20
 		self.side_display_height = 32*0
 		self.display = pygame.display.set_mode((self.display_width+self.side_display_width, self.display_height+self.side_display_height))
@@ -85,7 +85,7 @@ class Window:
 		self.directions = {0: "N", 1: "E", 2: "S", 3: "W"}
 
 		# init agents
-		starting_agents = 120 # max = 120
+		starting_agents = 15 # max = 120
 		self.agents = []
 		for i in range(starting_agents):
 			self.create_agent(i)
@@ -153,6 +153,14 @@ class Window:
 		
 				# percieve area
 				potential_cells = eye.look(agent[4], agent[5])
+
+				# EYE
+				agent_list, agent_pos_list = eye.percieve_area(self.agents, agent[4], agent[5])
+				agent[11] = agent_pos_list
+
+				# BRAIN
+				agent_sent_list = brain.evaluate_agents(self.agents, agent_list)
+				agent[12] = agent_sent_list
 
 				# calculate best cell to move to
 				move_cell = random.choice(potential_cells)
@@ -243,8 +251,10 @@ class Window:
 		muscle = agent.Muscle()
 		brain_map = [[0,0,0],[0,0,0],[0,0,0]]
 		experience_history = []
+		eye_data = []
+		brain_data = []
 
-		self.agents.append([number, name, color, shape, start_x, start_y, eye, brain, muscle, brain_map, experience_history])
+		self.agents.append([number, name, color, shape, start_x, start_y, eye, brain, muscle, brain_map, experience_history, eye_data, brain_data])
 
 		print("[AGENT#{}] Created! number={}, name={}, color={}, shape={}({}), pos=({}, {})".format(number, number, name, color, shape, self.shapes[shape], start_x, start_y))
 
@@ -262,16 +272,6 @@ class Window:
 				print("NOW FOLLOWING: #{}, {}".format(agent, self.agents[agent][1]))
 				self.focus = agent
 				break
-
-	def check_agent(self, number):
-		agent = self.agents[number]
-
-		print("[AGENT#{}] Stats:".format(agent[0]))
-		print("Name: {}".format(agent[1]))
-		print("Color: {}".format(agent[2]))
-		print("Shape: {}".format(self.shapes[agent[3]]))
-		print("Pos: ({}, {})".format(agent[4], agent[5]))
-		print("Experiences: {}".format(agent[7].total_experiences()))
 
 	def display_sidebar(self, x, y):
 		basic_info = self.FNT_MEDIUM.render("Steps: {}".format(self.total_steps), True, self.BLACK)
@@ -376,42 +376,57 @@ class Window:
 			# eye
 			x1, y1 = x, section_3_y
 
-			agent_list = []
-			agent_pos_list = []
-			for agent in self.agents:
-				if a[4]-4 < agent[4] < a[4]+4 and a[5]-4 < agent[5] < a[5]+4:
-					agent_list.append(agent)
-					agent_pos_list.append((agent[4], agent[5]))
-
-			# td minimap for eye
-			width, height = 7, 7
-			for yy in range(height):
-				for xx in range(width):
-					posxx = a[4]-3+xx
-					posyy = a[5]-3+yy
-
-					if xx == 3 and yy == 3:
-						col = self.BLACK
-						txt = a[0]
-					else:
-						col = self.GRAY
-						txt = ""
-
-						for a_num, a_pos in enumerate(agent_pos_list):
-							if a_pos[0] == posxx and a_pos[1] == posyy:
-								col = self.DK_GRAY
-								txt = self.agents[a_num][0]
-
-					pygame.draw.rect(self.display, col, (x1+(xx*20)+11, y1+(yy*20)+11, 19, 19))
-
-					if txt != "":
-						text = self.FNT_TINY.render("{}".format(txt), True, self.WHITE)
-						text_rect = text.get_rect(center=(x1+(xx*20)+11+10,y1+(yy*20)+11+9))
-						self.display.blit(text, text_rect)
-
 			text = self.FNT_LARGE.render("Eye", True, self.BLACK)
 			self.display.blit(text, (x1, y1-24))
 			pygame.draw.rect(self.display, self.BLACK, (x1, y1, 160, 160), 2)
+
+			# eye grid
+			for yy in range(7):
+				for xx in range(7):
+					if (xx, yy) == (3, 3):
+						col = self.BLACK
+					elif (xx, yy) in a[11]:
+						col = self.DK_GRAY
+					else:
+						col = self.GRAY
+
+					pygame.draw.rect(self.display, col, (x1+(xx*20)+11, y1+(yy*20)+11, 19, 19))
+
+			text = self.FNT_LARGE.render("{}".format(len(a[11])), True, self.BLACK)
+			self.display.blit(text, (x1+4, y1+1))
+
+			# agent_list = []
+			# agent_pos_list = []
+			# for agent in self.agents:
+			# 	if a[4]-4 < agent[4] < a[4]+4 and a[5]-4 < agent[5] < a[5]+4:
+			# 		agent_list.append(agent)
+			# 		agent_pos_list.append((agent[4], agent[5]))
+
+			# # td minimap for eye
+			# width, height = 7, 7
+			# for yy in range(height):
+			# 	for xx in range(width):
+			# 		posxx = a[4]-3+xx
+			# 		posyy = a[5]-3+yy
+
+			# 		if xx == 3 and yy == 3:
+			# 			col = self.BLACK
+			# 			txt = a[0]
+			# 		else:
+			# 			col = self.GRAY
+			# 			txt = ""
+
+			# 			for a_num, a_pos in enumerate(agent_pos_list):
+			# 				if a_pos[0] == posxx and a_pos[1] == posyy:
+			# 					col = self.DK_GRAY
+			# 					txt = self.agents[a_num][0]
+
+			# 		pygame.draw.rect(self.display, col, (x1+(xx*20)+11, y1+(yy*20)+11, 19, 19))
+
+			# 		if txt != "":
+			# 			text = self.FNT_TINY.render("{}".format(txt), True, self.WHITE)
+			# 			text_rect = text.get_rect(center=(x1+(xx*20)+11+10,y1+(yy*20)+11+9))
+			#			self.display.blit(text, text_rect)
 
 			# eye to brain link
 			pygame.draw.line(self.display, self.BLACK, (x1+160, y1+80), (x1+220, y1+80), 2)
@@ -423,28 +438,45 @@ class Window:
 			self.display.blit(text, (x1, y1-24))
 			pygame.draw.rect(self.display, self.BLACK, (x1, y1, 160, 160), 2)
 
-			# td minimap for brain
-			width, height = 7, 7
-			sent_grid = [[0]*width]*height
-			for yy in range(height):
-				for xx in range(width):
-					posxx = a[4]-3+xx
-					posyy = a[5]-3+yy
-
-					if xx == 3 and yy == 3:
+			# brain grid
+			for yy in range(7):
+				for xx in range(7):
+					if (xx, yy) == (3, 3):
 						col = self.BLACK
+					elif (xx, yy) in a[11]:
+						try:
+							index = a[11].index((xx, yy))
+							sent = a[12][index]
+							col = self.sentiment_colors_alt[sent]
+						except:
+							col = self.DK_GRAY
 					else:
 						col = self.GRAY
 
-						for a_num, a_pos in enumerate(agent_pos_list):
-							if a_pos[0] == posxx and a_pos[1] == posyy:
-								try:
-									sent_grid[xx][yy] = self.agents[a_num][7].predict([[self.agents[a_num][2], self.agents[a_num][3], -1]])
-									col = self.sentiment_colors_alt[sent_grid[xx][yy]]
-								except:
-									col = self.DK_GRAY
+					pygame.draw.rect(self.display, col, (x1+(xx*20)+11, y1+(yy*20)+11, 19, 19))
 
-					pygame.draw.rect(self.display, col, (x1+(xx*20)+10, y1+(yy*20)+10, 19, 19))
+			# # td minimap for brain
+			# width, height = 7, 7
+			# sent_grid = [[0]*width]*height
+			# for yy in range(height):
+			# 	for xx in range(width):
+			# 		posxx = a[4]-3+xx
+			# 		posyy = a[5]-3+yy
+
+			# 		if xx == 3 and yy == 3:
+			# 			col = self.BLACK
+			# 		else:
+			# 			col = self.GRAY
+
+			# 			for a_num, a_pos in enumerate(agent_pos_list):
+			# 				if a_pos[0] == posxx and a_pos[1] == posyy:
+			# 					try:
+			# 						sent_grid[xx][yy] = self.agents[a_num][7].predict([[self.agents[a_num][2], self.agents[a_num][3], -1]])
+			# 						col = self.sentiment_colors_alt[sent_grid[xx][yy]]
+			# 					except:
+			# 						col = self.DK_GRAY
+
+			# 		pygame.draw.rect(self.display, col, (x1+(xx*20)+10, y1+(yy*20)+10, 19, 19))
 
 			# brain to muscle link
 			pygame.draw.line(self.display, self.BLACK, (x1+160, y1+80), (x1+220, y1+80), 2)
@@ -452,65 +484,64 @@ class Window:
 			# muscle
 			x1, y1 = x+440, section_3_y
 
-			# section coords, last value is the average
-			sect_n = [0, 0, 6, 2, 0]
-			sect_e = [4, 0, 6, 6, 0]
-			sect_s = [0, 4, 6, 6, 0]
-			sect_w = [0, 0, 2, 6, 0]
-
-			for sect in [sect_n, sect_e, sect_s, sect_w]:
-				sect_sents = []
-
-				for yy in range(sect[1], sect[3]):
-					for xx in range(sect[0], sect[2]):
-						sect_sents.append(sent_grid[xx][yy])
-
-				# get average sent for the section
-				sect[4] = sum(sect_sents) / len(sect_sents)
-
-			# choose the highest avg sect as the direction
-			sect_list = [sect_n[4], sect_e[4], sect_s[4], sect_w[4]]
-			best_sects = [i for i, j in enumerate(sect_list) if j == max(sect_list)]
-			chosen_sect = random.choice(best_sects)
-
-			# visualization of muscle preference
-			pygame.draw.rect(self.display, self.BLACK, (x1+80-8, y1+80-8, 16, 16))
-
-			# draw lines for each direction (NSWE)
-			if sect_n[4] >= 0: col = self.GREEN
-			else: col = self.RED
-			pygame.draw.line(self.display, col, (x1+80, y1+80-8), (x1+80, y1+80-8-min(64, abs(sect_n[4]*32))), 9)
-
-			if sect_s[4] >= 0: col = self.GREEN
-			else: col = self.RED
-			pygame.draw.line(self.display, col, (x1+80, y1+80+8), (x1+80, y1+80+8+min(64, abs(sect_s[4]*32))), 9)
-
-			if sect_w[4] >= 0: col = self.GREEN
-			else: col = self.RED
-			pygame.draw.line(self.display, col, (x1+80-8, y1+80), (x1+80-8-min(64, abs(sect_w[4]*32)), y1+80), 9)
-
-			if sect_e[4] >= 0: col = self.GREEN
-			else: col = self.RED
-			pygame.draw.line(self.display, col, (x1+80+8, y1+80), (x1+80+8+min(64, abs(sect_e[4]*32)), y1+80), 9)
-
-			# text for chosen direction
-			text = self.FNT_LARGE.render("{}".format(self.directions[chosen_sect]), True, self.BLACK)
-			self.display.blit(text, (x1+4, y1+4))
-
-			# point line in chosen direction
-			if chosen_sect == 0:
-				pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80, y1+80-8-64), 3)
-			elif chosen_sect == 1:
-				pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80+8+64, y1+80), 3)
-			elif chosen_sect == 2:
-				pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80, y1+80+8+64), 3)
-			elif chosen_sect == 3:
-				pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80-8-64, y1+80), 3)
-
 			text = self.FNT_LARGE.render("Muscle", True, self.BLACK)
 			self.display.blit(text, (x1, y1-24))
 			pygame.draw.rect(self.display, self.BLACK, (x1, y1, 160, 160), 2)
 
+			# section coords, last value is the average
+			# sect_n = [0, 0, 6, 2, 0]
+			# sect_e = [4, 0, 6, 6, 0]
+			# sect_s = [0, 4, 6, 6, 0]
+			# sect_w = [0, 0, 2, 6, 0]
+
+			# for sect in [sect_n, sect_e, sect_s, sect_w]:
+			# 	sect_sents = []
+
+			# 	for yy in range(sect[1], sect[3]):
+			# 		for xx in range(sect[0], sect[2]):
+			# 			sect_sents.append(sent_grid[xx][yy])
+
+			# 	# get average sent for the section
+			# 	sect[4] = sum(sect_sents) / len(sect_sents)
+
+			# # choose the highest avg sect as the direction
+			# sect_list = [sect_n[4], sect_e[4], sect_s[4], sect_w[4]]
+			# best_sects = [i for i, j in enumerate(sect_list) if j == max(sect_list)]
+			# chosen_sect = random.choice(best_sects)
+
+			# # visualization of muscle preference
+			# pygame.draw.rect(self.display, self.BLACK, (x1+80-8, y1+80-8, 16, 16))
+
+			# # draw lines for each direction (NSWE)
+			# if sect_n[4] >= 0: col = self.GREEN
+			# else: col = self.RED
+			# pygame.draw.line(self.display, col, (x1+80, y1+80-8), (x1+80, y1+80-8-min(64, abs(sect_n[4]*32))), 9)
+
+			# if sect_s[4] >= 0: col = self.GREEN
+			# else: col = self.RED
+			# pygame.draw.line(self.display, col, (x1+80, y1+80+8), (x1+80, y1+80+8+min(64, abs(sect_s[4]*32))), 9)
+
+			# if sect_w[4] >= 0: col = self.GREEN
+			# else: col = self.RED
+			# pygame.draw.line(self.display, col, (x1+80-8, y1+80), (x1+80-8-min(64, abs(sect_w[4]*32)), y1+80), 9)
+
+			# if sect_e[4] >= 0: col = self.GREEN
+			# else: col = self.RED
+			# pygame.draw.line(self.display, col, (x1+80+8, y1+80), (x1+80+8+min(64, abs(sect_e[4]*32)), y1+80), 9)
+
+			# # text for chosen direction
+			# text = self.FNT_LARGE.render("{}".format(self.directions[chosen_sect]), True, self.BLACK)
+			# self.display.blit(text, (x1+4, y1+4))
+
+			# # point line in chosen direction
+			# if chosen_sect == 0:
+			# 	pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80, y1+80-8-64), 3)
+			# elif chosen_sect == 1:
+			# 	pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80+8+64, y1+80), 3)
+			# elif chosen_sect == 2:
+			# 	pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80, y1+80+8+64), 3)
+			# elif chosen_sect == 3:
+			# 	pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80-8-64, y1+80), 3)
 
 
 Window = Window()

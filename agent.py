@@ -24,9 +24,27 @@ class Eye:
 		for cell in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
 			potential_cells.append((x+cell[0], y+cell[1]))
 
-		# move_pos = random.choice(potential_cells)
-
 		return potential_cells
+
+	def percieve_area(self, agents, x, y):
+		x_offset = x-3
+		y_offset = y-3
+
+		agent_list = []
+		agent_pos_list = []
+
+		for xx in range(0, 7):
+			for yy in range(0, 7):
+
+				xx1 = xx + x_offset
+				yy1 = yy + y_offset
+
+				for agent in agents:
+					if agent[4] == xx1 and agent[5] == yy1: 
+						agent_list.append(agent[0])
+						agent_pos_list.append((xx, yy))
+
+		return agent_list, agent_pos_list
 
 class Brain:
 
@@ -83,6 +101,19 @@ class Brain:
 
 	def predict(self, X):
 		return self.clf.predict(X)[0]
+
+	def evaluate_agents(self, agents, agent_list):
+		agent_sent_list = []
+
+		for i in agent_list:
+			try:
+				agent_sent_list.append(self.predict([[agents[i][2], agents[i][3], -1]]))
+			except:
+				pass
+
+		return agent_sent_list
+
+		
 
 	def visualize(self, title="", show_text=True, mesh_step_size=0.1, show=True, time_limit=3600):
 		# step size in the mesh
