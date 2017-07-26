@@ -1,6 +1,6 @@
-![alt text](https://github.com/lucienraeg/MAS-Land/blob/master/media/MAS-Land%20Logo.png "MAS-Land")
+![MAS-Land](https://github.com/lucienraeg/MAS-Land/blob/master/media/MAS-Land%20Logo.png "MAS-Land")
 
-A simulated society made up of autonomous agents that learn how to interact with one another by classifying their experiences with individually trained machine learning statistical classifiers.
+An artificial society made up of autonomous agents that learn how to interact with one another by classifying their experiences with individually trained machine learning statistical classifiers.
 
 ### From the Paper - 1.1 Initial Concepts:
 
