@@ -26,7 +26,7 @@ class Eye:
 
 		return potential_cells
 
-	def percieve_area(self, agents, x, y):
+	def percieve_area(self, self_num, agents, x, y):
 		x_offset = x-3
 		y_offset = y-3
 
@@ -40,7 +40,7 @@ class Eye:
 				yy1 = yy + y_offset
 
 				for agent in agents:
-					if agent[4] == xx1 and agent[5] == yy1: 
+					if agent[4] == xx1 and agent[5] == yy1 and agent[0] != self_num: 
 						agent_list.append(agent[0])
 						agent_pos_list.append((xx, yy))
 
@@ -113,8 +113,6 @@ class Brain:
 
 		return agent_sent_list
 
-		
-
 	def visualize(self, title="", show_text=True, mesh_step_size=0.1, show=True, time_limit=3600):
 		# step size in the mesh
 
@@ -178,7 +176,6 @@ class Brain:
 		return plt
 
 
-
 class Muscle:
 
 	def __init__(self):
@@ -187,6 +184,47 @@ class Muscle:
 
 	def move(self, x, y):
 		return x, y
+
+	def evaluate_directions(self, agent_pos_list, agent_sent_list):
+		sect_areas = [(0, 0, 6, 3), (4, 0, 7, 7), (0, 4, 7, 7), (0, 0, 3, 7)]
+		sect_scores = [0, 0, 0, 0]
+
+		for i, sect in enumerate(sect_areas):
+			sect_sents = []
+
+			try:
+				for yy in range(sect[1], sect[3]):
+					for xx in range(sect[0], sect[2]):
+						if (xx, yy) in agent_pos_list:
+							index = agent_pos_list.index((xx, yy))
+							sent = agent_sent_list[index]
+
+							sect_sents.append(sent)
+
+
+				sect_sent = 0
+				for sent in sect_sents:
+					sect_sent += sent
+
+				sect_scores[i] = sect_sent
+				#sect_scores[i] = sum(sect_sents) / len(sect_sents)
+			except:
+				pass
+
+		return sect_scores
+
+	def move_direction(self, x, y, chosen_sect):
+		if chosen_sect == 0:
+			y -= 1
+		elif chosen_sect == 1:
+			x += 1
+		elif chosen_sect == 2:
+			y += 1
+		elif chosen_sect == 3:
+			x -= 1
+
+		return x, y
+
 
 
 if __name__ == "__main__":

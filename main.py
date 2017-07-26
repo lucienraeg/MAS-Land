@@ -33,19 +33,12 @@ class Window:
 		self.clock = pygame.time.Clock()
 		self.grid_size = 32
 		self.total_steps = 0
-
-		full_capacity = False
-
-		if full_capacity:
-			self.world_speed = 300
-			self.step_division = 1
-		else:
-			self.world_speed = 30
-			self.step_division = 10
+		self.paused = False
+		self.world_speed = 1
 
 		# init focus
 		self.focus = None # default = None
-		self.focus_msg = ("Initiated",0)
+		self.focus_msg = ("Initiated", 0)
 
 		# init focus graphs
 		self.focus_graphs = False
@@ -53,7 +46,7 @@ class Window:
 		self.focus_visualize_time = 1 # in seconds
 
 		# init sidebar values
-		self.brain_map_frequency = 10 # every n experiences
+		self.brain_map_frequency = 5 # every n experiences
 
 		# init colors
 		self.WHITE = (255, 255, 255)
@@ -85,7 +78,7 @@ class Window:
 		self.directions = {0: "N", 1: "E", 2: "S", 3: "W"}
 
 		# init agents
-		starting_agents = 15 # max = 120
+		starting_agents = 30 # max = 120
 		self.agents = []
 		for i in range(starting_agents):
 			self.create_agent(i)
@@ -97,90 +90,98 @@ class Window:
 
 		self.draw_grid(self.grid_size)
 
-		agent_pos_list = []
-		for agent in self.agents:
-			agent_pos_list.append((agent[4], agent[5]))
+		if not self.paused:
+			agent_pos_list = []
+			for agent in self.agents:
+				agent_pos_list.append((agent[4], agent[5]))
 
-		for agent in self.agents:
-			if (self.total_steps+agent[0]) % self.step_division == 0:
-				eye = agent[6]
-				brain = agent[7]
-				muscle = agent[8]
+			for agent in self.agents:
+				if self.total_steps % max(1, (60//self.world_speed)) == 0:
+					eye = agent[6]
+					brain = agent[7]
+					muscle = agent[8]
 
-				# process any experience had
-				agent_contacts = []
-				for a in enumerate(agent_pos_list):
-					# check for contact with another agent
-					if a[1] == (agent[4], agent[5]) and a[0] != agent[0]:
-						other_agent = a[0]
+					# process any experience had
+					agent_contacts = []
+					for a in enumerate(agent_pos_list):
+						# check for contact with another agent
+						if a[1] == (agent[4], agent[5]) and a[0] != agent[0]:
+							other_agent = a[0]
 
-						other_color = self.agents[other_agent][2]
-						other_shape = self.agents[other_agent][3]
-						other_x = self.agents[other_agent][4]
-						other_y = self.agents[other_agent][5]
-						other_biome = -1
+							other_color = self.agents[other_agent][2]
+							other_shape = self.agents[other_agent][3]
+							other_x = self.agents[other_agent][4]
+							other_y = self.agents[other_agent][5]
+							other_biome = -1
 
-						# get features
-						X_1 = other_color
-						X_2 = other_shape
-						X_3 = other_biome
+							# get features
+							X_1 = other_color
+							X_2 = other_shape
+							X_3 = other_biome
 
-						# decide sentiment (label)
-						sent = self.decide_sentiment(agent, X_1, X_2, X_3)
+							# decide sentiment (label)
+							sent = self.decide_sentiment(agent, X_1, X_2, X_3)
 
-						# experience
-						self.experience(agent, [X_1, X_2, X_3], sent)
+							# experience
+							self.experience(agent, [X_1, X_2, X_3], sent)
 
-						if brain.total_experiences() % self.brain_map_frequency == 0:
-							try:
-								new_sent = agent[7].predict([[X_1, X_2, X_3]])
-								agent[9][X_1][X_2] = new_sent # push to brain map
-							except:
-								pass
+							if brain.total_experiences() % self.brain_map_frequency == 0:
+								try:
+									new_sent = agent[7].predict([[X_1, X_2, X_3]])
+									agent[9][X_1][X_2] = new_sent # push to brain map
+								except:
+									pass
 
-						# print experience
-						if agent[0] == self.focus:
-							print("X = [{} {} {}], y = {}".format(X_1, X_2, X_3 , self.sentiments[sent]))
-							self.focus_msg = ("#{}, {}, {}, {}: {}".format(other_agent, self.color_names[other_color], self.shapes[other_shape], self.biomes[other_biome], self.sentiments[sent]), sent)
+							# print experience
+							if agent[0] == self.focus:
+								print("[@{}] X = [{} {} {}], y = {}".format(self.total_steps, X_1, X_2, X_3 , self.sentiments[sent]))
+								self.focus_msg = ("#{}, {}, {}, {}: {}".format(other_agent, self.color_names[other_color], self.shapes[other_shape], self.biomes[other_biome], self.sentiments[sent]), sent)
 
-						# learn from experiences
-						if brain.total_experiences() > 3:
-							brain.learn()
+							# learn from experiences
+							if brain.total_experiences() > 3:
+								brain.learn()
 
-							if agent[0] == self.focus and self.focus_graphs and brain.total_experiences() % self.focus_visualize_frequency == 0:
-								# self.check_agent(agent[0])
-								brain.visualize("AGENT#{}: {}".format(agent[0], agent[1]), time_limit=self.focus_visualize_time)
-		
-				# percieve area
-				potential_cells = eye.look(agent[4], agent[5])
+								if agent[0] == self.focus and self.focus_graphs and brain.total_experiences() % self.focus_visualize_frequency == 0:
+									# self.check_agent(agent[0])
+									brain.visualize("AGENT#{}: {}".format(agent[0], agent[1]), time_limit=self.focus_visualize_time)
 
-				# EYE
-				agent_list, agent_pos_list = eye.percieve_area(self.agents, agent[4], agent[5])
-				agent[11] = agent_pos_list
+					# EYE
+					agent_list, agent_pos_list = eye.percieve_area(agent[0], self.agents, agent[4], agent[5])
+					agent[11] = agent_pos_list
 
-				# BRAIN
-				agent_sent_list = brain.evaluate_agents(self.agents, agent_list)
-				agent[12] = agent_sent_list
+					# BRAIN
+					agent_sent_list = brain.evaluate_agents(self.agents, agent_list)
+					agent[12] = agent_sent_list
 
-				# calculate best cell to move to
-				move_cell = random.choice(potential_cells)
+					# MUSCLE
+					sect_scores = muscle.evaluate_directions(agent_pos_list, agent_sent_list)
+					sect_best_list = [i for i, j in enumerate(sect_scores) if j == max(sect_scores)]
+					chosen_sect = random.choice(sect_best_list)
+					agent[13] = sect_scores + [chosen_sect]
 
-				# move to that cell
-				agent[4], agent[5] = muscle.move(move_cell[0], move_cell[1])
+					agent[4], agent[5] = muscle.move_direction(agent[4], agent[5], chosen_sect)
 
-				# clamp pos
-				agent[4] = max(1, min(agent[4], (self.display_width//self.grid_size)-2))
-				agent[5] = max(1, min(agent[5], (self.display_height//self.grid_size)-2))
+					# random movement
+					# potential_cells = eye.look(agent[4], agent[5])
+					# move_cell = random.choice(potential_cells)
+					# agent[4], agent[5] = muscle.move(move_cell[0], move_cell[1])
+
+					# clamp pos
+					agent[4] = max(1, min(agent[4], (self.display_width//self.grid_size)-2))
+					agent[5] = max(1, min(agent[5], (self.display_height//self.grid_size)-2))
 
 		for agent in self.agents:
 			# draw agent
 			self.draw_agent(agent[4], agent[5], agent[2], agent[3], agent[0])
 
 		self.display_sidebar(self.display_width+16, 8)
+		self.display_controls(self.display_width+16+468-128, 12)
 
 		pygame.display.update()
-		self.clock.tick(self.world_speed)
-		self.total_steps += 1
+		self.clock.tick(60)
+
+		if not self.paused:
+			self.total_steps += 1
 
 		pygame.display.set_caption("Seed: {}, FPS: {}".format(seed, round(self.clock.get_fps(),2)))
 
@@ -188,20 +189,21 @@ class Window:
 		agent[7].process_experience(X, sentiment)
 		agent[10].append(sentiment)
 
-	def decide_sentiment(self, agent, X_1, X_2, X_3):
+	def decide_sentiment(self, agent, color, shape, biome):
 		sent = 0
 
-		# if X_1 == 0 and X_2 == 0:
-		# 	sent = -2
-		# elif X_1 == 0:
-		# 	sent = -1
-		# elif X_1 == 2:
-		# 	sent = 1
+		self_color = agent[2]
+		self_shape = agent[3]
 
-		if X_1 == 0:
+		if self_color == 0 and color == 1:
 			sent = -2
-		elif X_1 == 2:
-			sent = 2
+		elif self_color == 1 and color == 2:
+			sent = -2
+		elif self_color == 2 and color == 0:
+			sent = -2
+		else:
+			if self_shape == shape:
+				sent = 2
 
 		return sent
 
@@ -227,7 +229,7 @@ class Window:
 		self.display.blit(name, name_rect)
 
 		if number == self.focus:
-			pygame.draw.circle(self.display, self.YELLOW, (x, y), 6)
+			pygame.draw.circle(self.display, self.YELLOW, (x, y), 38	, 3)
 
 	def draw_agent_body(self, x, y, color, shape):
 		if self.shapes[shape] == "square":
@@ -253,29 +255,64 @@ class Window:
 		experience_history = []
 		eye_data = []
 		brain_data = []
+		muscle_data = []
 
-		self.agents.append([number, name, color, shape, start_x, start_y, eye, brain, muscle, brain_map, experience_history, eye_data, brain_data])
+		self.agents.append([number, name, color, shape, start_x, start_y, eye, brain, muscle, brain_map, experience_history, eye_data, brain_data, muscle_data])
 
 		print("[AGENT#{}] Created! number={}, name={}, color={}, shape={}({}), pos=({}, {})".format(number, number, name, color, shape, self.shapes[shape], start_x, start_y))
 
-	def click_world(self, mouse_x, mouse_y):
-		x = mouse_x//self.grid_size
-		y = mouse_y//self.grid_size
+	def display_controls(self, x, y):
+		
+		# auto on/off
+		pygame.draw.rect(self.display, self.GRAY, (x-76, y, 64, 16))
 
-		agent_pos_list = []
-		for agent in self.agents:
-			agent_pos_list.append((agent[4], agent[5]))
+		if x-76 < self.mouse_x < x-16 and y < self.mouse_y < y+16:
+			pygame.draw.rect(self.display, self.BLACK, (x-76, y, 64, 16), 2)
+			if pygame.mouse.get_pressed()[0]:
+				self.paused = 1
 
-		for agent, agent_pos in enumerate(agent_pos_list):
-			
-			if (x, y) == agent_pos and agent != self.focus:
-				print("NOW FOLLOWING: #{}, {}".format(agent, self.agents[agent][1]))
-				self.focus = agent
-				break
+		text = self.FNT_SMALL.render("PAUSE", True, self.BLACK)
+		text_rect = text.get_rect(center=(x-76+32,y+8))
+		self.display.blit(text, text_rect)
+
+		pygame.draw.rect(self.display, self.GRAY, (x-76-68, y, 64, 16))
+
+		if x-76-68 < self.mouse_x < x-16-68 and y < self.mouse_y < y+16:
+			pygame.draw.rect(self.display, self.BLACK, (x-76-68, y, 64, 16), 2)
+			if pygame.mouse.get_pressed()[0]:
+				self.paused = 0
+
+		text = self.FNT_SMALL.render("PLAY", True, self.BLACK)
+		text_rect = text.get_rect(center=(x-76+32-68,y+8))
+		self.display.blit(text, text_rect)
+
+		# bar
+		sensitivity = 0.25
+
+		w = round(self.world_speed,1)
+		success = min(1.0, self.clock.get_fps() / 60)
+
+		if success < 0.6: col = self.RED
+		elif success < 0.8: col = self.LT_RED
+		else: col = self.DK_GRAY
+
+		pygame.draw.rect(self.display, self.GRAY, (x, y, 256, 16))
+		pygame.draw.rect(self.display, col, (x, y, self.world_speed/sensitivity, 16))
+
+		if x < self.mouse_x < x+256 and y < self.mouse_y < y+16:
+			pygame.draw.rect(self.display, self.BLACK, (x, y, 256, 16), 2)
+
+			if pygame.mouse.get_pressed()[0]:
+				xx = self.mouse_x-x
+				self.world_speed = max(1, xx*sensitivity)
+
+		text = self.FNT_SMALL.render("{} [{}%]".format(w, round(success*100, 1)), True, self.BLACK)
+		text_rect = text.get_rect(center=(x+128,y+8))
+		self.display.blit(text, text_rect)
 
 	def display_sidebar(self, x, y):
 		basic_info = self.FNT_MEDIUM.render("Steps: {}".format(self.total_steps), True, self.BLACK)
-		self.display.blit(basic_info, (x,y))
+		self.display.blit(basic_info, (x,y+3))
 
 		# brain maps
 		section_1_y = 48
@@ -303,19 +340,18 @@ class Window:
 						for sentx in range(3):
 							for senty in range(3):
 								col = self.sentiment_colors[self.agents[num][9][sentx][senty]]
-
 								pygame.draw.rect(self.display, col, (x1+(sentx*(size/3)), y1+(senty*(size/3)), size/3, size/3))
  
 					except sklearn.exceptions.NotFittedError:
-						name = self.FNT_SMALL.render("?", True, self.BLACK)
-						name_rect = name.get_rect(center=(x1+(size/2),y1+(size/2)))
-						self.display.blit(name, name_rect)
+						pass
 
 					# draw highlight box				
 					if x1 < self.mouse_x < x1+size and y1 < self.mouse_y < y1+size and self.focus != num:
 						pygame.draw.rect(self.display, self.BLACK, (x1, y1, size, size), 1)
+						# self.draw_agent_body(x1+(size//2), y1+(size//2), self.agents[num][2], self.agents[num][3])
 
 						if pygame.mouse.get_pressed()[0]:
+							self.focus_msg = ("new focus", 0)
 							self.focus = num
 
 					if self.focus == num:
@@ -395,38 +431,9 @@ class Window:
 			text = self.FNT_LARGE.render("{}".format(len(a[11])), True, self.BLACK)
 			self.display.blit(text, (x1+4, y1+1))
 
-			# agent_list = []
-			# agent_pos_list = []
-			# for agent in self.agents:
-			# 	if a[4]-4 < agent[4] < a[4]+4 and a[5]-4 < agent[5] < a[5]+4:
-			# 		agent_list.append(agent)
-			# 		agent_pos_list.append((agent[4], agent[5]))
-
-			# # td minimap for eye
-			# width, height = 7, 7
-			# for yy in range(height):
-			# 	for xx in range(width):
-			# 		posxx = a[4]-3+xx
-			# 		posyy = a[5]-3+yy
-
-			# 		if xx == 3 and yy == 3:
-			# 			col = self.BLACK
-			# 			txt = a[0]
-			# 		else:
-			# 			col = self.GRAY
-			# 			txt = ""
-
-			# 			for a_num, a_pos in enumerate(agent_pos_list):
-			# 				if a_pos[0] == posxx and a_pos[1] == posyy:
-			# 					col = self.DK_GRAY
-			# 					txt = self.agents[a_num][0]
-
-			# 		pygame.draw.rect(self.display, col, (x1+(xx*20)+11, y1+(yy*20)+11, 19, 19))
-
-			# 		if txt != "":
-			# 			text = self.FNT_TINY.render("{}".format(txt), True, self.WHITE)
-			# 			text_rect = text.get_rect(center=(x1+(xx*20)+11+10,y1+(yy*20)+11+9))
-			#			self.display.blit(text, text_rect)
+			# text below
+			text = self.FNT_SMALL.render("{}".format(a[11][:5]), True, self.BLACK)
+			self.display.blit(text, (x1, y1+162))
 
 			# eye to brain link
 			pygame.draw.line(self.display, self.BLACK, (x1+160, y1+80), (x1+220, y1+80), 2)
@@ -441,9 +448,7 @@ class Window:
 			# brain grid
 			for yy in range(7):
 				for xx in range(7):
-					if (xx, yy) == (3, 3):
-						col = self.BLACK
-					elif (xx, yy) in a[11]:
+					if (xx, yy) in a[11]:
 						try:
 							index = a[11].index((xx, yy))
 							sent = a[12][index]
@@ -455,28 +460,11 @@ class Window:
 
 					pygame.draw.rect(self.display, col, (x1+(xx*20)+11, y1+(yy*20)+11, 19, 19))
 
-			# # td minimap for brain
-			# width, height = 7, 7
-			# sent_grid = [[0]*width]*height
-			# for yy in range(height):
-			# 	for xx in range(width):
-			# 		posxx = a[4]-3+xx
-			# 		posyy = a[5]-3+yy
+			pygame.draw.rect(self.display, self.BLACK, (x1+71, y1+71, 19, 19), 1)
 
-			# 		if xx == 3 and yy == 3:
-			# 			col = self.BLACK
-			# 		else:
-			# 			col = self.GRAY
-
-			# 			for a_num, a_pos in enumerate(agent_pos_list):
-			# 				if a_pos[0] == posxx and a_pos[1] == posyy:
-			# 					try:
-			# 						sent_grid[xx][yy] = self.agents[a_num][7].predict([[self.agents[a_num][2], self.agents[a_num][3], -1]])
-			# 						col = self.sentiment_colors_alt[sent_grid[xx][yy]]
-			# 					except:
-			# 						col = self.DK_GRAY
-
-			# 		pygame.draw.rect(self.display, col, (x1+(xx*20)+10, y1+(yy*20)+10, 19, 19))
+			# text below
+			text = self.FNT_SMALL.render("{}".format(a[12][:9]), True, self.BLACK)
+			self.display.blit(text, (x1, y1+162))
 
 			# brain to muscle link
 			pygame.draw.line(self.display, self.BLACK, (x1+160, y1+80), (x1+220, y1+80), 2)
@@ -488,60 +476,46 @@ class Window:
 			self.display.blit(text, (x1, y1-24))
 			pygame.draw.rect(self.display, self.BLACK, (x1, y1, 160, 160), 2)
 
-			# section coords, last value is the average
-			# sect_n = [0, 0, 6, 2, 0]
-			# sect_e = [4, 0, 6, 6, 0]
-			# sect_s = [0, 4, 6, 6, 0]
-			# sect_w = [0, 0, 2, 6, 0]
+			# visualization of muscle preference
+			pygame.draw.rect(self.display, self.BLACK, (x1+80-8, y1+80-8, 16, 16))
 
-			# for sect in [sect_n, sect_e, sect_s, sect_w]:
-			# 	sect_sents = []
+			sect_scores = a[13]
 
-			# 	for yy in range(sect[1], sect[3]):
-			# 		for xx in range(sect[0], sect[2]):
-			# 			sect_sents.append(sent_grid[xx][yy])
+			# draw lines for each direction (NESW)
+			if len(sect_scores) > 0:
+				if sect_scores[0] != 0:
+					if sect_scores[0] >= 0: col = self.GREEN
+					else: col = self.RED
+					pygame.draw.line(self.display, col, (x1+80, y1+80-8), (x1+80, y1+80-8-min(64, abs((sect_scores[0]+1)*8))), 9)
 
-			# 	# get average sent for the section
-			# 	sect[4] = sum(sect_sents) / len(sect_sents)
+				if sect_scores[1] != 0:
+					if sect_scores[1] >= 0: col = self.GREEN
+					else: col = self.RED
+					pygame.draw.line(self.display, col, (x1+80+8, y1+80), (x1+80+8+min(64, abs((sect_scores[1]+1)*8)), y1+80), 9)
 
-			# # choose the highest avg sect as the direction
-			# sect_list = [sect_n[4], sect_e[4], sect_s[4], sect_w[4]]
-			# best_sects = [i for i, j in enumerate(sect_list) if j == max(sect_list)]
-			# chosen_sect = random.choice(best_sects)
+				if sect_scores[2] != 0:
+					if sect_scores[2] >= 0: col = self.GREEN
+					else: col = self.RED
+					pygame.draw.line(self.display, col, (x1+80, y1+80+8), (x1+80, y1+80+8+min(64, abs((sect_scores[2]+1)*8))), 9)
 
-			# # visualization of muscle preference
-			# pygame.draw.rect(self.display, self.BLACK, (x1+80-8, y1+80-8, 16, 16))
+				if sect_scores[3] != 0:
+					if sect_scores[3] >= 0: col = self.GREEN
+					else: col = self.RED
+					pygame.draw.line(self.display, col, (x1+80-8, y1+80), (x1+80-8-min(64, abs((sect_scores[3]+1)*8)), y1+80), 9)
 
-			# # draw lines for each direction (NSWE)
-			# if sect_n[4] >= 0: col = self.GREEN
-			# else: col = self.RED
-			# pygame.draw.line(self.display, col, (x1+80, y1+80-8), (x1+80, y1+80-8-min(64, abs(sect_n[4]*32))), 9)
+				# text for chosen direction
+				text = self.FNT_LARGE.render("{}".format(self.directions[sect_scores[4]]), True, self.BLACK)
+				self.display.blit(text, (x1+4, y1+4))
 
-			# if sect_s[4] >= 0: col = self.GREEN
-			# else: col = self.RED
-			# pygame.draw.line(self.display, col, (x1+80, y1+80+8), (x1+80, y1+80+8+min(64, abs(sect_s[4]*32))), 9)
+				if sect_scores[4] == 0: pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80, y1+80-60), 3)
+				elif sect_scores[4] == 1: pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80+60, y1+80), 3)
+				elif sect_scores[4] == 2: pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80, y1+80+60), 3)
+				elif sect_scores[4] == 3: pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80-60, y1+80), 3)
 
-			# if sect_w[4] >= 0: col = self.GREEN
-			# else: col = self.RED
-			# pygame.draw.line(self.display, col, (x1+80-8, y1+80), (x1+80-8-min(64, abs(sect_w[4]*32)), y1+80), 9)
+				# text below, direction scores
+				text = self.FNT_SMALL.render("{}".format(sect_scores[:4]), True, self.BLACK)
+				self.display.blit(text, (x1, y1+162))
 
-			# if sect_e[4] >= 0: col = self.GREEN
-			# else: col = self.RED
-			# pygame.draw.line(self.display, col, (x1+80+8, y1+80), (x1+80+8+min(64, abs(sect_e[4]*32)), y1+80), 9)
-
-			# # text for chosen direction
-			# text = self.FNT_LARGE.render("{}".format(self.directions[chosen_sect]), True, self.BLACK)
-			# self.display.blit(text, (x1+4, y1+4))
-
-			# # point line in chosen direction
-			# if chosen_sect == 0:
-			# 	pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80, y1+80-8-64), 3)
-			# elif chosen_sect == 1:
-			# 	pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80+8+64, y1+80), 3)
-			# elif chosen_sect == 2:
-			# 	pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80, y1+80+8+64), 3)
-			# elif chosen_sect == 3:
-			# 	pygame.draw.line(self.display, self.BLACK, (x1+80, y1+80), (x1+80-8-64, y1+80), 3)
 
 
 Window = Window()
@@ -550,6 +524,9 @@ while running:
 	Window.main()
 
 	mouse_pos = pygame.mouse.get_pos()
+
+	if pygame.mouse.get_pressed()[0] and mouse_pos[0] < Window.display_width:
+		Window.focus = None
 
 	# events
 	for event in pygame.event.get():
