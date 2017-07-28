@@ -23,8 +23,8 @@ class Window:
 		pygame.init()
 
 		# init display
-		self.display_width = 32*15 # default = 32*40
-		self.display_height = 32*15 # default = 32*30
+		self.display_width = 32*20 # default = 32*40
+		self.display_height = 32*20 # default = 32*30
 		self.side_display_width = 32*20
 		self.side_display_height = 32*0
 		self.display = pygame.display.set_mode((self.display_width+self.side_display_width, self.display_height+self.side_display_height))
@@ -32,9 +32,11 @@ class Window:
 		# init misc
 		self.clock = pygame.time.Clock()
 		self.grid_size = 32
-		self.total_steps = 0
-		self.paused = False
+		self.total_steps = 1
+		self.paused = True
 		self.world_speed = 1
+		self.world_experience_log = []
+		self.world_experience_log_length = 20
 
 		# init focus
 		self.focus = None # default = None
@@ -78,7 +80,7 @@ class Window:
 		self.directions = {0: "N", 1: "E", 2: "S", 3: "W"}
 
 		# init agents
-		starting_agents = 30 # max = 120
+		starting_agents = 15 # max = 120
 		self.agents = []
 		for i in range(starting_agents):
 			self.create_agent(i)
@@ -96,7 +98,7 @@ class Window:
 				agent_pos_list.append((agent[4], agent[5]))
 
 			for agent in self.agents:
-				if self.total_steps % max(1, (60//self.world_speed)) == 0:
+				if (self.total_steps+(agent[0]*4)) % max(1, (60//self.world_speed)) == 0:
 					eye = agent[6]
 					brain = agent[7]
 					muscle = agent[8]
@@ -121,6 +123,7 @@ class Window:
 
 							# decide sentiment (label)
 							sent = self.decide_sentiment(agent, X_1, X_2, X_3)
+							self.log_experience(self.total_steps, agent[0], a[0], (agent[0], agent[4]), sent)
 
 							# experience
 							self.experience(agent, [X_1, X_2, X_3], sent)
@@ -134,7 +137,7 @@ class Window:
 
 							# print experience
 							if agent[0] == self.focus:
-								print("[@{}] X = [{} {} {}], y = {}".format(self.total_steps, X_1, X_2, X_3 , self.sentiments[sent]))
+								print("[@{}] X = [{} {} {}], y = {}".format(self.total_steps, X_1, X_2, X_3 , sent))
 								self.focus_msg = ("#{}, {}, {}, {}: {}".format(other_agent, self.color_names[other_color], self.shapes[other_shape], self.biomes[other_biome], self.sentiments[sent]), sent)
 
 							# learn from experiences
@@ -185,6 +188,11 @@ class Window:
 
 		pygame.display.set_caption("Seed: {}, FPS: {}".format(seed, round(self.clock.get_fps(),2)))
 
+	def log_experience(self, step, agent_a, agent_b, location, sentiment):
+		self.world_experience_log = [[step, agent_a, agent_b, location, sentiment]] + self.world_experience_log
+		if len(self.world_experience_log) > self.world_experience_log_length:
+			self.world_experience_log.pop(self.world_experience_log_length)
+
 	def experience(self, agent, X, sentiment):
 		agent[7].process_experience(X, sentiment)
 		agent[10].append(sentiment)
@@ -195,15 +203,20 @@ class Window:
 		self_color = agent[2]
 		self_shape = agent[3]
 
-		if self_color == 0 and color == 1:
-			sent = -2
-		elif self_color == 1 and color == 2:
-			sent = -2
-		elif self_color == 2 and color == 0:
+		# if self_color == 0 and color == 1:
+		# 	sent = -2
+		# elif self_color == 1 and color == 2:
+		# 	sent = -2
+		# elif self_color == 2 and color == 0:
+		# 	sent = -2
+		# else:
+		# 	if self_shape == shape:
+		# 		sent = 2
+
+		if self_color != color:
 			sent = -2
 		else:
-			if self_shape == shape:
-				sent = 2
+			sent = 2
 
 		return sent
 
@@ -229,7 +242,7 @@ class Window:
 		self.display.blit(name, name_rect)
 
 		if number == self.focus:
-			pygame.draw.circle(self.display, self.YELLOW, (x, y), 38	, 3)
+			pygame.draw.rect(self.display, self.YELLOW, (x-32, y-32, 64, 64), 3)
 
 	def draw_agent_body(self, x, y, color, shape):
 		if self.shapes[shape] == "square":
@@ -259,7 +272,7 @@ class Window:
 
 		self.agents.append([number, name, color, shape, start_x, start_y, eye, brain, muscle, brain_map, experience_history, eye_data, brain_data, muscle_data])
 
-		print("[AGENT#{}] Created! number={}, name={}, color={}, shape={}({}), pos=({}, {})".format(number, number, name, color, shape, self.shapes[shape], start_x, start_y))
+		print("[AGENT#{}] Created! number={}, name={}, color={}({}), shape={}({}), pos=({}, {})".format(number, number, name, color, self.color_names[color], shape, self.shapes[shape], start_x, start_y))
 
 	def display_controls(self, x, y):
 		
@@ -275,7 +288,10 @@ class Window:
 		text_rect = text.get_rect(center=(x-76+32,y+8))
 		self.display.blit(text, text_rect)
 
-		pygame.draw.rect(self.display, self.GRAY, (x-76-68, y, 64, 16))
+		if self.paused: col = self.LT_GREEN
+		else: col = self.GRAY
+
+		pygame.draw.rect(self.display, col, (x-76-68, y, 64, 16))
 
 		if x-76-68 < self.mouse_x < x-16-68 and y < self.mouse_y < y+16:
 			pygame.draw.rect(self.display, self.BLACK, (x-76-68, y, 64, 16), 2)
@@ -360,8 +376,45 @@ class Window:
 					# increment num
 					num += 1
 
-		# agent focus
 		section_2_y = section_1_y + (rows*(size+16)) + 16
+					
+		# world stats
+		if self.focus == None:
+			column_names = ["Step #", "Agent A", "Agent B", "Location", "Sentiment"]
+
+			text = self.FNT_MEDIUM.render("World Experience Log", True, self.BLACK)
+			self.display.blit(text, (x, section_2_y))
+
+			pygame.draw.rect(self.display, self.BLACK, (x, section_2_y+20, 310, 5+(self.world_experience_log_length)*18), 2)
+
+			for row in range(0, self.world_experience_log_length):
+
+				if row != 0:
+					try:
+						if self.world_experience_log[row][4] == 0: bgcol = self.GRAY
+						elif self.world_experience_log[row][4] > 0: bgcol = self.LT_GREEN
+						elif self.world_experience_log[row][4] < 0: bgcol = self.LT_RED
+					except:
+						bgcol = self.GRAY
+
+					pygame.draw.rect(self.display, bgcol, (x+5, section_2_y+(row*18)+22, 300, 16))
+
+				for column in range(0, 5):
+					x1 = x+(column*60)+5
+					y1 = section_2_y+(row*18)+22
+
+					if row == 0:
+						t = column_names[column]
+					else:
+						try:
+							t = self.world_experience_log[row][column]
+						except:
+							t = ""
+
+					text = self.FNT_MEDIUM.render("{}".format(t), True, self.BLACK)
+					self.display.blit(text, (x1, y1))
+
+		# agent focus
 		if self.focus != None:
 			a = self.agents[self.focus]
 

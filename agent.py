@@ -16,7 +16,9 @@ style.use('ggplot')
 class Eye:
 
 	def __init__(self):
-		print("Eye: Inititiated")
+		pass
+
+		# print("Eye: Inititiated")
 
 	def look(self, x, y):
 		potential_cells = []
@@ -50,11 +52,11 @@ class Brain:
 
 	def __init__(self, k=3, *args, **kwargs):
 		self.k = k
-		self.clf = KNeighborsClassifier(n_neighbors=self.k, algorithm="ball_tree", weights="uniform", n_jobs=1)
+		self.clf = KNeighborsClassifier(n_neighbors=self.k, algorithm="ball_tree", weights="distance", n_jobs=1)
 		self.X = np.array([])
 		self.y = np.array([])
 
-		print("Brain: Inititiated")
+		# print("Brain: Inititiated")
 
 	def process_experience(self, X, sentiment, details=False):
 		self.X = self.X.tolist()
@@ -179,7 +181,9 @@ class Brain:
 class Muscle:
 
 	def __init__(self):
-		print("Muscle: Inititiated")
+		pass
+
+		# print("Muscle: Inititiated")
 
 
 	def move(self, x, y):
