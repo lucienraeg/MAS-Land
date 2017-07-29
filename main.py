@@ -23,8 +23,8 @@ class Window:
 		pygame.init()
 
 		# init display
-		self.display_width = 32*20 # default = 32*40
-		self.display_height = 32*20 # default = 32*30
+		self.display_width = 32*25 # default = 32*40
+		self.display_height = 32*25 # default = 32*30
 		self.side_display_width = 32*20
 		self.side_display_height = 32*0
 		self.display = pygame.display.set_mode((self.display_width+self.side_display_width, self.display_height+self.side_display_height))
@@ -34,9 +34,11 @@ class Window:
 		self.grid_size = 32
 		self.total_steps = 1
 		self.paused = True
-		self.world_speed = 1
+		self.world_speed = 3
+		self.world_experience_log_length = 22
 		self.world_experience_log = []
-		self.world_experience_log_length = 20
+		self.world_experience_stats_length = 65
+		self.world_experience_stats = [[0]*self.world_experience_log_length]*self.world_experience_stats_length
 
 		# init focus
 		self.focus = None # default = None
@@ -80,7 +82,7 @@ class Window:
 		self.directions = {0: "N", 1: "E", 2: "S", 3: "W"}
 
 		# init agents
-		starting_agents = 15 # max = 120
+		starting_agents = 60 # max = 120
 		self.agents = []
 		for i in range(starting_agents):
 			self.create_agent(i)
@@ -98,7 +100,8 @@ class Window:
 				agent_pos_list.append((agent[4], agent[5]))
 
 			for agent in self.agents:
-				if (self.total_steps+(agent[0]*4)) % max(1, (60//self.world_speed)) == 0:
+				# if (self.total_steps) % max(1, (60//self.world_speed)) == 0:
+				if (self.total_steps+(agent[0]*4)+len(agent[10])) % max(1, (180//self.world_speed)) == 0:
 					eye = agent[6]
 					brain = agent[7]
 					muscle = agent[8]
@@ -123,7 +126,7 @@ class Window:
 
 							# decide sentiment (label)
 							sent = self.decide_sentiment(agent, X_1, X_2, X_3)
-							self.log_experience(self.total_steps, agent[0], a[0], (agent[0], agent[4]), sent)
+							self.log_experience(self.total_steps, agent[0], a[0], (agent[4], agent[5]), sent)
 
 							# experience
 							self.experience(agent, [X_1, X_2, X_3], sent)
@@ -193,6 +196,14 @@ class Window:
 		if len(self.world_experience_log) > self.world_experience_log_length:
 			self.world_experience_log.pop(self.world_experience_log_length)
 
+		# add to world experience stats
+		world_experience_stats_entry = [0]*self.world_experience_log_length
+		for i, exp in enumerate(self.world_experience_log):
+			world_experience_stats_entry[i] = exp[4]
+		self.world_experience_stats = [world_experience_stats_entry] + self.world_experience_stats
+		if len(self.world_experience_stats) > self.world_experience_stats_length:
+			self.world_experience_stats.pop(self.world_experience_stats_length)
+
 	def experience(self, agent, X, sentiment):
 		agent[7].process_experience(X, sentiment)
 		agent[10].append(sentiment)
@@ -217,6 +228,8 @@ class Window:
 			sent = -2
 		else:
 			sent = 2
+
+		# sent = random.randint(-2, 2)
 
 		return sent
 
@@ -338,7 +351,6 @@ class Window:
 		num = 0
 		for yy in range(rows):
 			for xx in range(columns):
-
 				if num <= len(self.agents)-1:
 					x1 = x+xx*(size+4)
 					y1 = y+yy*(size+16)+section_1_y
@@ -413,6 +425,34 @@ class Window:
 
 					text = self.FNT_MEDIUM.render("{}".format(t), True, self.BLACK)
 					self.display.blit(text, (x1, y1))
+
+
+			# recent experience map
+			text = self.FNT_MEDIUM.render("Recent Experience Map", True, self.BLACK)
+			self.display.blit(text, (x+320, section_2_y))
+
+			pygame.draw.rect(self.display, self.BLACK, (x+320, section_2_y+20, 275, 275), 2)
+
+			for exp in self.world_experience_log:
+				world_diff_x = 275/self.display_width
+				world_diff_y = 275/self.display_height
+				exp_x = x+328+(exp[3][0]*(32*world_diff_x))
+				exp_y = section_2_y+28+(exp[3][1]*(32*world_diff_y))
+				pygame.draw.circle(self.display, self.sentiment_colors_alt[exp[4]], (int(exp_x), int(exp_y)), 4)
+
+			# world experience stats
+			text = self.FNT_MEDIUM.render("World Experience Stats", True, self.BLACK)
+			self.display.blit(text, (x+320, section_2_y+300))
+
+			pygame.draw.rect(self.display, self.BLACK, (x+320, section_2_y+300+20, 275, 101), 2)
+
+			for i, exp_set in enumerate(self.world_experience_stats):
+				exp_list = []
+				for j, exp in enumerate(sorted(exp_set, reverse=True)):
+					color = self.sentiment_colors[exp]
+					pygame.draw.rect(self.display, color, (x+320+8+(i*4), section_2_y+300+20+7+(j*4), 3, 4))
+
+
 
 		# agent focus
 		if self.focus != None:
